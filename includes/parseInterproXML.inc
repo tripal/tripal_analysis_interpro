@@ -226,7 +226,6 @@ function tripal_analysis_interpro_parseSingleXMLFile ($analysis_id, $interproxml
          // parse the XML and add the IPR terms individually to the analysisfeatureprop table
          $ipr_obj = tripal_analysis_interpro_get_result_object($protein->asXML(),$feature_id); 
          $iprterms = $ipr_obj['iprterms'];
-         print "Adding IPR terms\n";
          foreach($iprterms as $iprterm){ 
             if(strcmp($iprterm[0],'noIPR')!=0){
                // add the cvterm
@@ -242,9 +241,14 @@ function tripal_analysis_interpro_parseSingleXMLFile ($analysis_id, $interproxml
                // as we encounter them. If the term already exists
                // we do not want to update it.
                $ipr_cvterm = tripal_cv_add_cvterm($term,NULL,0,0);
+               if(!$ipr_cvterm){
+                  print "ERROR: Cannot find cvterm: $iprterm[0] '$iprterm[1]'\n";
+                  watchdog('tripal_interpro', "Cannot find InterPro cvterm: $iprterm[0] '$iprterm[1]'",NULL,WATCHDOG_ERROR);
+                  exit;
+               }
                
                // Insert IPR terms into the feature_cvterm table
-               // the default pub_id of 1 (NULL) is used.
+               // the default pub_id of 1 (NULL) is used. if the cvterm already exists then just skip adding it
                $values = array(
                   'feature_id' => $feature_id,             
                   'cvterm_id' => $ipr_cvterm->cvterm_id,
@@ -254,6 +258,10 @@ function tripal_analysis_interpro_parseSingleXMLFile ($analysis_id, $interproxml
                $cvterm = tripal_core_chado_select('feature_cvterm',$columns,$values);
                if(count($cvterm) == 0){
                   $success = tripal_core_chado_insert('feature_cvterm',$values);
+                  if(!$success){
+                     print "ERROR:  Cannot add cvterm to feature for the interpro term: $iprterm[0] '$iprterm[1]'\n";
+                     exit;
+                  }
                }
                
                // Insert IPR terms into the analysisfeaturepropt table
@@ -264,6 +272,10 @@ function tripal_analysis_interpro_parseSingleXMLFile ($analysis_id, $interproxml
                   'value' => $iprterm[0]
                );
                $success = tripal_core_chado_insert('analysisfeatureprop',$values);
+               if(!$success){
+                  print "ERROR:  Cannot add cvterm as an analysis feature property for the interpro term: $iprterm[0] '$iprterm[1]'\n";
+                  exit;
+               }
             }
          }
 
@@ -278,17 +290,30 @@ function tripal_analysis_interpro_parseSingleXMLFile ($analysis_id, $interproxml
                if (preg_match("/^.*?GO:(\d+).*$/", $goterm, $matches)) {
 
                   // Find cvterm_id for the matched GO term
-                  $sql = "SELECT cvterm_id FROM {cvterm} CVT 
-                          INNER JOIN dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+                  $sql = "SELECT cvterm_id 
+                          FROM {cvterm} CVT 
+                             INNER JOIN dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
                           WHERE DBX.accession = '%s' AND DBX.db_id = %d";
                   $goterm_id = db_result(db_query($sql, $matches[1], $go_db_id));
+                  if(!$goterm_id){
+                     print "WARNING: Cannot find cvterm: 'GO:$matches[1]'... skipping.\n";
+                     watchdog('tripal_interpro', "Cannot find GO cvterm: 'GO:$matches[1]'... skipping.",NULL,WATCHDOG_WARNING);
+                     continue;
+                  }
 
-                  // Insert GO terms into feature_cvterm table
-                  // Default pub_id = 1 (NULL) was used
-                  $values = array('feature_id' => $feature_id, 'cvterm_id' => $goterm_id, 'pub_id' => 1);
+                  // Insert GO terms into feature_cvterm table. Default pub_id = 1 (NULL) was used. But
+                  // only insert if not already there
+                  $values = array(
+                     'feature_id' => $feature_id, 
+                     'cvterm_id' => $goterm_id, 
+                     'pub_id' => 1);
                   $feature_cvterm = tripal_core_chado_select('feature_cvterm',array('*'),$values);
                   if(sizeof($feature_cvterm) == 0){
                      $feature_cvterm = tripal_core_chado_insert('feature_cvterm',$values);
+                     if(!$feature_cvterm){
+                        print "ERROR:  Cannot add cvterm to the feature for term: $goterm_id'\n";
+                        exit;
+                     }
                   }
 
                   // Insert GO terms into analysisfeatureprop table
