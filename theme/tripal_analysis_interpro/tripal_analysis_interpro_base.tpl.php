@@ -45,7 +45,7 @@ $analysis = tripal_core_expand_chado_vars($analysis,'field','analysis.descriptio
         <td><?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></td>
       </tr>
       <tr class="tripal_analysis_interpro-table-even-row tripal-table-even-row">
-        <th nowrap>Description</th>
+        <th nowrap>Materials & Methods</th>
         <td><?php print $analysis->description; ?></td>
       </tr>      
       <tr class="tripal_analysis_interpro-table-odd-row tripal-table-odd-row">
