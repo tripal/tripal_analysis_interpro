@@ -155,6 +155,9 @@ function chado_analysis_interpro_load($node) {
    $query_type        = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_type');
    $query_uniquename  = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_uniquename');
 
+   if (!is_object($analysis->tripal_analysis_interpro)) {
+     $analysis->tripal_analysis_interpro = new stdClass;  
+   }
    $analysis->tripal_analysis_interpro->interprofile      = $interprofile->value;
    $analysis->tripal_analysis_interpro->interproparameters= $interproparameters->value;
    $analysis->tripal_analysis_interpro->parsego           = $parsego->value;
