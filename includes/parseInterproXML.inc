@@ -6,6 +6,10 @@
  */
 function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
     $parsego, $query_re, $query_type, $query_uniquename, $job_id) {
+
+  // make sure we have a persistent db connection
+  $connection = tripal_db_persistent_chado();
+
   // Prepare log
   $filename = preg_replace("/.*\/(.*)/", "$1", $interproxmlfile);
   $logfile = file_directory_path() . "/tripal/tripal_analysis_interpro/load_$filename.log";
@@ -19,7 +23,7 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
   // clear out the anslysisfeature table for this analysis before getting started
   tripal_core_chado_delete('analysisfeature', array('analysis_id' => $analysis_id));
 
-  // If user input a file(e.g. blast.xml)
+  // If user input a file(e.g. interpro.xml)
   if (is_file($interproxmlfile)) {
     tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
         $parsego, $query_re, $query_type, $query_uniquename, $job_id, 1, $log);
@@ -140,7 +144,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     $seqname =$attr ['id'];
 
     // is the sequence name a generic name (i.e. 'Sequence_1') then the
-    // blast results do not contain the original sequence names.  The only
+    // results do not contain the original sequence names.  The only
     // option we have is to use the filename.  This will work in the case of
     // Blast2GO which stores the XML for each sequence in a file with the
     // the filename the name of the sequence
@@ -222,7 +226,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
        
       // remove any existing entries. we'll replace them.
       $match = array('analysisfeature_id' => $analysisfeature_id);
-      tripal_core_chado_delete('blast_hit_data', $match);
+      tripal_core_chado_delete('analysisfeature', $match);
 
       // Insert interpro xml results into analysisfeatureprop table
       // but fisrt check to see if we have an existing entry
