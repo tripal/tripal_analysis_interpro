@@ -81,7 +81,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       "   INNER JOIN cv ON cv.cv_id = CVT.cv_id ".
       "WHERE CVT.name = 'analysis_interpro_xmloutput_hit' ".
       "   AND CV.name = 'tripal'";
-  $type_id = db_result(db_query($sql));
+  $type_id = db_result(chado_query($sql));
 
   // Load the XML file
   $xml =  simplexml_load_file($interproxmlfile);
@@ -120,7 +120,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
 
   // get the DB id for the GO database
   $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
-  $go_db_id = db_result(db_query("SELECT db_id FROM {db} WHERE name='GO'"));
+  $go_db_id = db_result(chado_query("SELECT db_id FROM {db} WHERE name='GO'"));
   if ($parsego and !$go_db_id) {
     fwrite($log, 'GO schema not installed in chado. GO terms are not processed.');
   }
@@ -205,6 +205,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     }
     $feature_id = $feature_arr[0]->feature_id;
 
+  
      
     // Successfully matched. print 'Succeeded'. Add analysis_id and
     // feature_id to analysisfeature. Add the table as XML to analysisfeatureprop
@@ -223,26 +224,28 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       else {
         $analysisfeature_id = $analysisfeature[0]->analysisfeature_id;
       }
-       
+
       // remove any existing entries. we'll replace them.
       $match = array('analysisfeature_id' => $analysisfeature_id);
-      tripal_core_chado_delete('analysisfeature', $match);
+      tripal_core_chado_delete('analysisfeatureprop', $match);
 
       // Insert interpro xml results into analysisfeatureprop table
       // but fisrt check to see if we have an existing entry
-      $sql = "SELECT analysisfeatureprop_id,rank
-      FROM {analysisfeatureprop}
-      WHERE analysisfeature_id = %d AND type_id = %d
-      ORDER BY rank DESC";
-      $result = db_fetch_object(db_query($sql, $analysisfeature_id, $type_id));
+      $sql = "
+         SELECT analysisfeatureprop_id,rank
+         FROM {analysisfeatureprop}
+         WHERE analysisfeature_id = %d AND type_id = %d
+         ORDER BY rank DESC
+      ";
+      $result = db_fetch_object(chado_query($sql, $analysisfeature_id, $type_id));
       $rank = 0;
       if ($result) {
         $afp_id = $result->analysisfeatureprop_id;
         $rank = $result->rank + 1;
       }
       $sql = "INSERT INTO {analysisfeatureprop} (analysisfeature_id, type_id, value, rank)".
-          "VALUES (%d, %d, '%s', %d)";
-      db_query($sql, $analysisfeature_id, $type_id, $protein->asXML(), $rank);
+             "VALUES (%d, %d, '%s', %d)";
+      chado_query($sql, $analysisfeature_id, $type_id, $protein->asXML(), $rank);
        
       // parse the XML and add the IPR terms individually to the analysisfeatureprop table
       $ipr_obj = tripal_analysis_interpro_get_result_object($protein->asXML(), $feature_id);
@@ -315,7 +318,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
             FROM {cvterm} CVT
             INNER JOIN dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
             WHERE DBX.accession = '%s' AND DBX.db_id = %d";
-            $goterm_id = db_result(db_query($sql, $matches[1], $go_db_id));
+            $goterm_id = db_result(chado_query($sql, $matches[1], $go_db_id));
             if (!$goterm_id) {
               fwrite($log, "WARNING: Cannot find cvterm: 'GO:$matches[1]'... skipping.\n");
               watchdog('tripal_interpro', "Cannot find GO cvterm: 'GO:$matches[1]'... skipping.", NULL, WATCHDOG_WARNING);
