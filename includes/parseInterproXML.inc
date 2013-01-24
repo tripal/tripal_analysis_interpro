@@ -73,6 +73,9 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
   fwrite($log, date("D M j G:i:s Y") . ". Loading $interproxmlfile\n");
   print "Parsing File:" . $interproxmlfile . " ...\n";
 
+  // remove any existing entries. we'll replace them.
+  $match = array('analysis_id' => $analysis_id);
+  tripal_core_chado_delete('analysisfeature', $match); 
 
   // Get cvterm_id for 'analysis_interpro_xmloutput_hits' which is required
   // for inserting into the analysisfeatureprop table
@@ -222,12 +225,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
         $analysisfeature_id = $analysisfeature['analysisfeature_id'];
       } 
       else {
-        $analysisfeature_id = $analysisfeature[0]->analysisfeature_id;
+        $analysisfeature_id = $analysisfeature[0]->analysisfeature_id;      
       }
-
-      // remove any existing entries. we'll replace them.
-      $match = array('analysisfeature_id' => $analysisfeature_id);
-      tripal_core_chado_delete('analysisfeatureprop', $match);
 
       // Insert interpro xml results into analysisfeatureprop table
       // but fisrt check to see if we have an existing entry
