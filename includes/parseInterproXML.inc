@@ -88,6 +88,10 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
 
   // Load the XML file
   $xml =  simplexml_load_file($interproxmlfile);
+  if (!$xml) {
+    watchdog('tripal_interpro', "Cannot open XML. Please check that it is valid XML.", NULL, WATCHDOG_ERROR);
+    return;
+  }
 
   // If there is an EBI header then we need to skip that
   // and set our proteins array to be the second element of the array. This
