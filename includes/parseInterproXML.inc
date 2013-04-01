@@ -134,7 +134,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     // Set job status
     $idx_iterations ++;    
     if ($idx_iterations % $interval == 0) {
-      $percentage = ($idx_iterations / $no_iterations) * ($file_no/$total_files) * 100;
+      $percentage = sprintf("%.4f", ($idx_iterations / $no_iterations) * ($file_no/$total_files) * 100);
       tripal_job_set_progress($job_id, $percentage);
       print "Parsing KEGG file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
