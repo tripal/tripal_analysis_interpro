@@ -9,24 +9,32 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
 
   // make sure we have a persistent db connection
   $connection = tripal_db_persistent_chado();
-
-  // Prepare log
-  $filename = preg_replace("/.*\/(.*)/", "$1", $interproxmlfile);
-  $logfile = file_directory_path() . "/tripal/tripal_analysis_interpro/load_$filename.log";
-  $logfile = tempnam(sys_get_temp_dir(), "tripal_analysis_interpro_import");
-  $log = fopen($logfile, 'a'); // append parsing results to log file
-  if (!$log) {
-    print "ERROR: cannot open log file: $logfile\n";
-    exit;
+  if (!$connection) {
+    watchdog('tr_interpro_parse',"NOTICE: Cannot create persistent connection to the database. Uploading may be slow", 
+        array(), 'notice');
+      exit;  
   }
-   
+  
+  // begin the transaction
+  tripal_db_start_transaction();
+      
+  // if we cannot get a connection then let the user know the loading will be slow
+  if (!$connection) {
+     print "A persistant connection was not obtained. Loading will be slow\n";
+  }
+  else {
+     print "\nNOTE: Loading of these InterPro results is performed using a database transaction. \n" .
+           "If the load fails or is terminated prematurely then the entire set of \n" .
+           "insertions/updates is rolled back and will not be found in the database\n\n";
+  }
+  
   // clear out the anslysisfeature table for this analysis before getting started
   tripal_core_chado_delete('analysisfeature', array('analysis_id' => $analysis_id));
 
   // If user input a file(e.g. interpro.xml)
   if (is_file($interproxmlfile)) {
     tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
-        $parsego, $query_re, $query_type, $query_uniquename, $job_id, 1, $log);
+        $parsego, $query_re, $query_type, $query_uniquename, $job_id, 1);
   }
   else {
     $dir_handle = @opendir($interproxmlfile) or die("Unable to open $interproxmlfile");
@@ -43,47 +51,37 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
     // Parsing all files in the directory
     while ($file = readdir($dir_handle)) {
       if (preg_match("/^.*\.xml/i", $file)) {
-
         tripal_analysis_interpro_parseSingleXMLFile($analysis_id, "$interproxmlfile/$file",
-            $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $log);
-
-        // Set job status
-        if ($no_file % $interval == 0) {
-          $percentage = (int) (($no_file / $total_files) * 100);
-          tripal_job_set_progress($job_id, $percentage);
-          print $percentage ."% ";
-        }
+          $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $no_file, $total_files);        
       }
       $no_file ++;
     }
   }
 
-  print "Done.\nSuccessful and failed entries have been saved in the log file:\n $logfile\n";
-  fwrite($log, "\n");
-  fclose($log);
+  // commit the transaction
+  tripal_db_commit_transaction();
+  print "\nDone\n";     
 }
 /**
  *
  */
 function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
-    $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status = 1,
-    $log) {
-
-  // Parsing started
-  fwrite($log, date("D M j G:i:s Y") . ". Loading $interproxmlfile\n");
-  print "Parsing File:" . $interproxmlfile . " ...\n";
-
-  // remove any existing entries. we'll replace them.
-  $match = array('analysis_id' => $analysis_id);
-  tripal_core_chado_delete('analysisfeature', $match); 
+    $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status = 1, 
+    $file_no = 1, $total_files = 1) {
+      
+  $filename = preg_replace('/^.*\/(.*)$/' , '$1', $interproxmlfile);
 
   // Get cvterm_id for 'analysis_interpro_xmloutput_hits' which is required
   // for inserting into the analysisfeatureprop table
-  $previous_db = db_set_active('chado'); // use chado database
-  $sql = "SELECT CVT.cvterm_id FROM {cvterm} CVT ".
-      "   INNER JOIN cv ON cv.cv_id = CVT.cv_id ".
-      "WHERE CVT.name = 'analysis_interpro_xmloutput_hit' ".
-      "   AND CV.name = 'tripal'";
+  $sql = "
+    SELECT 
+      CVT.cvterm_id 
+    FROM {cvterm} CVT 
+      INNER JOIN {cv} ON cv.cv_id = CVT.cv_id 
+    WHERE 
+      CVT.name = 'analysis_interpro_xmloutput_hit' AND
+      CV.name = 'tripal'
+  ";
   $type_id = db_result(chado_query($sql));
 
   // Load the XML file
@@ -108,8 +106,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     $proteins = $xml;
   }
   else {
-    print "ERROR: cannot parse XML file format is not recognized\n";
-    fwrite($log, "ERROR: cannot parse XML file format is not recognized\n");
+    watchdog('tr_interpro_parse', "ERROR: cannot parse XML file format is not recognized", array(), WATCHDOG_ERROR);
     return;
   }
 
@@ -118,7 +115,6 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
   foreach ($proteins as $protein) {
     $no_iterations ++;
   }
-  fwrite($log, "  Found results for $no_iterations sequences\n");
   $interval = intval($no_iterations * 0.01);
   if ($interval == 0) {
     $interval = 1;
@@ -129,22 +125,21 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
   $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
   $go_db_id = db_result(chado_query("SELECT db_id FROM {db} WHERE name='GO'"));
   if ($parsego and !$go_db_id) {
-    fwrite($log, 'GO schema not installed in chado. GO terms are not processed.');
+    watchdog('tr_interpro_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
   }
 
   // Processed each protein
   foreach ($proteins as $protein) {
-
+    
     // Set job status
-    $idx_iterations ++;
-    if ($idx_iterations % $interval == 0 and $update_status) {
-      $percentage = (int) ($idx_iterations / $no_iterations * 100);
-      db_set_active($previous_db);
+    $idx_iterations ++;    
+    if ($idx_iterations % $interval == 0) {
+      $percentage = (int) (($idx_iterations / $no_iterations) * ($file_no/$total_files) * 100);
       tripal_job_set_progress($job_id, $percentage);
-      $previous_db = db_set_active('chado');
-      print $percentage ."% ";
+      print "Parsing KEGG file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
-
+           
+    
     // match the protein id with the feature name
     $feature_id = 0;
     $attr = $protein->attributes();
@@ -157,7 +152,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     // the filename the name of the sequence
     if (preg_match('/Sequence_\d+/', $seqname)) {
       $filename = preg_replace('/^.*\/(.*).xml$/', '$1', $interproxmlfile);
-      fwrite($log, "  Sequence name is not specific, using filename: $filename\n");
+      watchdog('tr_interpro_parse', "Sequence name for results is not specific, using filename: %filename as the sequence name\n", array('%filename' => $filename), WATCHDOG_NOTICE);
       $seqname = $filename;
     }
 
@@ -180,7 +175,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     }
 
     if (!$feature and $query_re) {
-      fwrite($log, "Failed: Cannot find feature for '$seqname' using the regular expression: $query_re\n");
+      watchdog('tr_interpro_parse', "Failed: Cannot find feature for '%seqname' using the regular expression: %query_re",
+        array('%seqname' => $seqname, '%query_re' => $query_re));
       continue;
     }
 
@@ -203,11 +199,13 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
 
     $feature_arr = tripal_core_chado_select('feature', array('feature_id'), $select);
     if (count($feature_arr) > 1) {
-      fwrite($log, "Ambiguous: '$feature' matches more than one feature and is being skipped.\n");
+      watchdog('tr_interpro_parse', "Ambiguous: '%feature' matches more than one feature and is being skipped.",
+        array('%feature' => $feature), WATCHDOG_WARNING);
       continue;
     }
     if (count($feature_arr) == 0) {
-      fwrite($log, "Failed: cannot find a matching feature for '$feature' in the database.\n");
+      watchdog('tr_interpro_parse', "Failed: cannot find a matching feature for '%feature' in the database.",
+        array('%feature' => $feature), WATCHDOG_ERROR);
       continue;
     }
     $feature_id = $feature_arr[0]->feature_id;
@@ -217,9 +215,6 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     // Successfully matched. print 'Succeeded'. Add analysis_id and
     // feature_id to analysisfeature. Add the table as XML to analysisfeatureprop
     if ($feature_id) {
-
-      print "  Adding InterPro results for feature '$seqname' ($feature_id)\n";
-      fwrite($log, "  Adding InterPro results for feature '$seqname' ($feature_id)\n");
 
       // Insert into analysisfeature table only if it doesn't already exist
       $values = array('feature_id' => $feature_id, 'analysis_id' => $analysis_id);
@@ -269,8 +264,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
           // we do not want to update it.
           $ipr_cvterm = tripal_cv_add_cvterm($term, NULL, 0, 0);
           if (!$ipr_cvterm) {
-            fwrite($log, "Failed: Cannot find cvterm: $iprterm[0] '$iprterm[1]'\n");
-            watchdog('tripal_interpro', "Cannot find InterPro cvterm: $iprterm[0] '$iprterm[1]'", NULL, WATCHDOG_ERROR);
+            watchdog('tr_interpro_parse', "Failed: Cannot find cvterm: %name '%value'",
+              array('%name' => $iprterm[0], '%value' =>  $iprterm[1]), WATCHDOG_ERROR);
             continue;
           }
            
@@ -286,7 +281,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
           if (count($cvterm) == 0) {
             $success = tripal_core_chado_insert('feature_cvterm', $values);
             if (!$success) {
-              fwrite($log, "Failed:  Cannot add cvterm to feature for the interpro term: $iprterm[0] '$iprterm[1]'\n");
+              watchdog('tr_interpro_parse', "Failed: Cannot add cvterm: %name '%value'",
+                array('%name' => $iprterm[0], '%value' =>  $iprterm[1]), WATCHDOG_ERROR);
               continue;
             }
           }
@@ -300,7 +296,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
           );
           $success = tripal_core_chado_insert('analysisfeatureprop', $values);
           if (!$success) {
-            fwrite($log, "Failed:  Cannot add cvterm as an analysis feature property for the interpro term: $iprterm[0] '$iprterm[1]'\n");
+            watchdog('tr_interpro_parse', "Failed:  Cannot add cvterm as an analysis feature property for the interpro term: %name '%value'",
+              array('%name' => $iprterm[0], '%value' =>  $iprterm[1]), WATCHDOG_ERROR);
             continue;
           }
         }
@@ -323,8 +320,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
             WHERE DBX.accession = '%s' AND DBX.db_id = %d";
             $goterm_id = db_result(chado_query($sql, $matches[1], $go_db_id));
             if (!$goterm_id) {
-              fwrite($log, "WARNING: Cannot find cvterm: 'GO:$matches[1]'... skipping.\n");
-              watchdog('tripal_interpro', "Cannot find GO cvterm: 'GO:$matches[1]'... skipping.", NULL, WATCHDOG_WARNING);
+              watchdog('tr_interpro_parse', "Cannot find GO cvterm: 'GO:%term'. skipping.", 
+                array('%term' => $matches[1]), WATCHDOG_WARNING);
               continue;
             }
 
@@ -338,7 +335,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
             if (sizeof($feature_cvterm) == 0) {
               $feature_cvterm = tripal_core_chado_insert('feature_cvterm', $values);
               if (!$feature_cvterm) {
-                fwrite($log, "ERROR:  Cannot add cvterm to the feature for term: $goterm_id'\n");
+                watchdog('tr_interpro_parse', "ERROR:  Cannot add cvterm to the feature for term: %goterm_id'\n",
+                  array('%goterm_id' => $goterm_id), WATCHDOG_ERROR);
                 continue;
               }
             }
@@ -356,10 +354,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
         } // end for each goterm
       } // end if ($parsego and $go_db_id)
     } // end if ($feature_id)
-  } // end foreach ($proteins as $protein)
-    db_set_active($previous_db); // Use drupal database
-
-    return;
+  } // end foreach ($proteins as $protein)  
+  return;
 }
 /*******************************************************************************
  * Parses the Interpro XML for a single feature and returns an object
