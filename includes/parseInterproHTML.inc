@@ -23,7 +23,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
   // for inserting into the analysisfeatureprop table
   $previous_db = tripal_db_set_active('chado'); // use chado database
   $sql = "SELECT CVT.cvterm_id FROM {cvterm} CVT ".
-      "INNER JOIN cv ON cv.cv_id = CVT.cv_id ".
+      "INNER JOIN {cv} ON cv.cv_id = CVT.cv_id ".
       "WHERE CVT.name = 'analysis_interpro_output_hit' ".
       "AND CV.name = 'tripal'";
   $type_id = db_result(db_query($sql));
@@ -163,7 +163,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         // If the value of the inserting content is not duplicate, add it to
         // analysisfeaturepro with 'higest_rank + 1'
         $sql = "SELECT MAX(rank) FROM {analysisfeatureprop} AFP ".
-            "INNER JOIN analysisfeature AF ON AF.analysisfeature_id = AFP.analysisfeature_id ".
+            "INNER JOIN {analysisfeature} AF ON AF.analysisfeature_id = AFP.analysisfeature_id ".
             "WHERE feature_id=%d ".
             "AND analysis_id=%d ".
             "AND type_id=%d ";
@@ -215,7 +215,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
                    
                   // Find cvterm_id for the matched GO term
                   $sql = "SELECT cvterm_id FROM {cvterm} CVT
-                  INNER JOIN dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+                  INNER JOIN {dbxref} DBX ON CVT.dbxref_id = DBX.dbxref_id
                   WHERE DBX.accession = '%s' AND DBX.db_id = %d";
                   $goterm_id = db_result(db_query($sql, $matches[1], $go_db_id));
                    
