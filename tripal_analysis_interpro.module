@@ -515,12 +515,12 @@ function tripal_get_interpro_XML_results($feature_id) {
 function tripal_get_interpro_HTML_results($feature_id) {
   // Get cvterm_id for 'analysis_interpro_output_hit' which is required
   // for inserting into the analysisfeatureprop table
-  $previous_db = tripal_db_set_active('chado');
+  
   $sql = "SELECT CVT.cvterm_id FROM {cvterm} CVT
           INNER JOIN {cv} ON cv.cv_id = CVT.cv_id
           WHERE CVT.name = 'analysis_interpro_output_hit'
           AND CV.name = 'tripal'";
-  $type_id = db_result(db_query($sql));
+  $type_id = db_result(chado_query($sql));
 
    // Get analysis times for the feature
   $sql = "SELECT A.analysis_id AS aid
@@ -534,8 +534,8 @@ function tripal_get_interpro_HTML_results($feature_id) {
            AND AFP.value NOT like '%children%'
           GROUP BY A.analysis_id
          ";
-   $hasResult = db_result(db_query($sql, $feature_id, $type_id));
-   $result = db_query($sql, $feature_id, $type_id);
+   $hasResult = db_result(chado_query($sql, $feature_id, $type_id));
+   $result = chado_query($sql, $feature_id, $type_id);
 
    // Show interpro result ORDER BY time
    if ($hasResult) { // If there is any result, show expandable box
@@ -547,12 +547,12 @@ function tripal_get_interpro_HTML_results($feature_id) {
          $sql = "SELECT name, to_char(timeexecuted, 'MM-DD-YYYY') AS time
                FROM {analysis}
                WHERE analysis_id = %d";
-         $ana_details = db_fetch_object(db_query($sql, $ana->aid));
+         $ana_details = db_fetch_object(chado_query($sql, $ana->aid));
          // Find node id for the analysis
-         tripal_db_set_active($previous_db);
+         
          $ana_nid = db_result(db_query("SELECT nid FROM {chado_analysis} WHERE analysis_id = %d", $ana->aid));
          $ana_url = url("node/". $ana_nid);
-         $previous_db = tripal_db_set_active('chado');
+         
 
          // Show content
          $content .= "<strong>Analysis Date:</strong> $ana_details->time
@@ -569,7 +569,7 @@ function tripal_get_interpro_HTML_results($feature_id) {
                  AND AFP.value NOT like '%parent%'
                  AND AFP.value NOT like '%children%'
                 ";
-         $interpro_results = db_query($sql, $ana->aid, $feature_id, $type_id);
+         $interpro_results = chado_query($sql, $ana->aid, $feature_id, $type_id);
          while ($afp = db_fetch_object($interpro_results)) {
            $content .= $afp->afpvalue;
          }
@@ -577,7 +577,6 @@ function tripal_get_interpro_HTML_results($feature_id) {
       $content .= '</td></tr></table>';
    }
 
-   tripal_db_set_active($previous_db);
   return $content;
 }
 
@@ -588,12 +587,12 @@ function tripal_get_interpro_HTML_results($feature_id) {
 function tripal_get_interpro_results_index_version($feature_id) {
    // Get cvterm_id for 'analysis_interpro_output_hit' which is required
    // for inserting into the analysisfeatureprop table
-   $previous_db = tripal_db_set_active('chado');
+   
    $sql = "SELECT CVT.cvterm_id FROM {cvterm} CVT ".
           "INNER JOIN {cv} ON cv.cv_id = CVT.cv_id ".
           "WHERE CVT.name = 'analysis_interpro_output_hit' ".
           "AND CV.name = 'tripal'";
-   $type_id = db_result(db_query($sql));
+   $type_id = db_result(chado_query($sql));
 
    // Get xml string from analysisfeatureprop value column
    $sql = "SELECT AFP.value AS afpvalue FROM {analysisfeatureprop} AFP ".
@@ -601,8 +600,8 @@ function tripal_get_interpro_results_index_version($feature_id) {
           "INNER JOIN {analysisprop} AP ON AP.analysis_id = AF.analysis_id ".
           "WHERE feature_id = %d ".
           "AND AFP.type_id = %d ";
-   $result = db_query($sql, $feature_id, $type_id);
-   tripal_db_set_active($previous_db);
+   $result = chado_query($sql, $feature_id, $type_id);
+   
    if (db_result($result)) {
       // get the HTML content for viewing each of the XML file
       while ($analysisfeatureprop = db_fetch_object($result)) {

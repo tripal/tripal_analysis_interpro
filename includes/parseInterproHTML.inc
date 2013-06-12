@@ -21,12 +21,12 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
 
   // Get cvterm_id for 'analysis_interpro_output_iteration_hits' which is required
   // for inserting into the analysisfeatureprop table
-  $previous_db = tripal_db_set_active('chado'); // use chado database
+  
   $sql = "SELECT CVT.cvterm_id FROM {cvterm} CVT ".
       "INNER JOIN {cv} ON cv.cv_id = CVT.cv_id ".
       "WHERE CVT.name = 'analysis_interpro_output_hit' ".
       "AND CV.name = 'tripal'";
-  $type_id = db_result(db_query($sql));
+  $type_id = db_result(chado_query($sql));
   print "cvterm_id for analysis_interpro_output_iteration_hits is $type_id\n";
 
   // Load the HTML file and convert it into XML for loading
@@ -58,10 +58,8 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
     if ($table->getName() == 'table' && !preg_match('/No hits reported/', $table->asXML()) ) {
       $idx_iterations ++;
       if ($idx_iterations % $interval == 0) {
-        $percentage = (int) ($idx_iterations / $no_iterations * 100);
-        tripal_db_set_active($previous_db);
-        tripal_job_set_progress($job_id, $percentage);
-        $previous_db = tripal_db_set_active('chado');
+        $percentage = (int) ($idx_iterations / $no_iterations * 100);        
+        tripal_job_set_progress($job_id, $percentage);        
         print $percentage . "% ";
       }
 
@@ -79,13 +77,13 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
             // Find out how many features match this uniquename
             $sql = "SELECT count(feature_id) FROM {feature} ".
                 "WHERE uniquename = '%s' ";
-            $no_features = db_result(db_query($sql, $seqname));
+            $no_features = db_result(chado_query($sql, $seqname));
 
             // If there is only one match, get the feature_id
             if ($no_features == 1) {
               $sql = "SELECT feature_id FROM {feature} ".
                   "WHERE uniquename = '%s' ";
-              $feature_id = db_result(db_query($sql, $seqname));
+              $feature_id = db_result(chado_query($sql, $seqname));
               print "\tfeature id is $feature_id\n";
 
               // If the uniquename matches more than one features then skip and print 'Ambiguous'
@@ -142,7 +140,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         // Otherwise, Insert into analysisfeature table
         //------------------------------------
         $sql = "Select analysisfeature_id as id from {analysisfeature} where feature_id = %d and analysis_id = %d";
-        $analysisfeature =  db_fetch_object(db_query($sql, $feature_id, $analysis_id));
+        $analysisfeature =  db_fetch_object(chado_query($sql, $feature_id, $analysis_id));
         if ($analysisfeature) {
           $analysisfeature_id = $analysisfeature->id;
         }
@@ -150,9 +148,9 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
           print "inserting analysisfeature\n";
           $sql = "INSERT INTO {analysisfeature} (feature_id, analysis_id) ".
               "VALUES (%d, %d)";
-          db_query($sql, $feature_id, $analysis_id);
+          chado_query($sql, $feature_id, $analysis_id);
           $sql = "Select analysisfeature_id from {analysisfeature} where feature_id = %d and analysis_id = %d";
-          $analysisfeature =  db_fetch_object(db_query($sql, $feature_id, $analysis_id));
+          $analysisfeature =  db_fetch_object(chado_query($sql, $feature_id, $analysis_id));
           $analysisfeature_id = $analysisfeature->id;
         }
 
@@ -168,7 +166,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
             "AND analysis_id=%d ".
             "AND type_id=%d ";
 
-        $afp =  db_fetch_object(db_query($sql, $feature_id, $analysis_id, $type_id));
+        $afp =  db_fetch_object(chado_query($sql, $feature_id, $analysis_id, $type_id));
         $hi_rank = 0;
         if ($afp) {
           $hi_rank = $afp->max + 1;
@@ -179,7 +177,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         //------------------------------------------------------------
         // Before inserting, make sure it's not a duplicate
         $sql = "SELECT value FROM {analysisfeatureprop} WHERE analysisfeature_id = %d AND type_id = %d";
-        $result = db_query($sql, $analysisfeature_id, $type_id);
+        $result = chado_query($sql, $analysisfeature_id, $type_id);
         $duplicate = 0;
         while ($afp_value = db_fetch_object($result)) {
           if ($table_txt == $afp_value->value) {
@@ -189,7 +187,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         if (!$duplicate) {
           $sql = "INSERT INTO {analysisfeatureprop} (analysisfeature_id, type_id, value, rank)".
               "VALUES (%d, %d, '%s', %d)";
-          db_query($sql, $analysisfeature_id, $type_id, $table_txt, $hi_rank);
+          chado_query($sql, $analysisfeature_id, $type_id, $table_txt, $hi_rank);
           fwrite($log, " (Insert)\n"); // write to log
           print "\twriting table\n";
         } 
@@ -199,7 +197,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         }
 
         // Parse GO terms. Make sure GO database schema is installed in chado
-        $go_db_id = db_result(db_query("SELECT db_id FROM {db} WHERE name='GO'"));
+        $go_db_id = db_result(chado_query("SELECT db_id FROM {db} WHERE name='GO'"));
         if (!$go_db_id) {
           print 'GO schema not installed in chado. GO terms are not processed.';
         }
@@ -217,7 +215,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
                   $sql = "SELECT cvterm_id FROM {cvterm} CVT
                   INNER JOIN {dbxref} DBX ON CVT.dbxref_id = DBX.dbxref_id
                   WHERE DBX.accession = '%s' AND DBX.db_id = %d";
-                  $goterm_id = db_result(db_query($sql, $matches[1], $go_db_id));
+                  $goterm_id = db_result(chado_query($sql, $matches[1], $go_db_id));
                    
                   //-------------------------------------------
                   // Insert GO terms into feature_cvterm table
@@ -225,14 +223,14 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
                   // Default pub_id = 1 (NULL) was used
                   $sql = "INSERT INTO {feature_cvterm} (feature_id, cvterm_id, pub_id)
                   VALUES (%d, %d, 1)";
-                  db_query($sql, $feature_id, $goterm_id);
+                  chado_query($sql, $feature_id, $goterm_id);
 
                   //------------------------------------------------
                   // Insert GO terms into analysisfeatureprop table
                   //------------------------------------------------
                   $sql = "INSERT INTO {analysisfeatureprop} (analysisfeature_id, type_id, value, rank) ".
                       "VALUES (%d, %d, '%s', 0)";
-                  db_query($sql, $analysisfeature_id, $goterm_id, $matches[1]);
+                  chado_query($sql, $analysisfeature_id, $goterm_id, $matches[1]);
                 }
               }
             }
@@ -240,8 +238,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         }
       }
     }
-  }
-  tripal_db_set_active($previous_db); // Use drupal database
+  }  
   print "Done.\nSuccessful and failed entries have been saved in the log file:\n $logfile\n";
 
   fwrite($log, "\n");
