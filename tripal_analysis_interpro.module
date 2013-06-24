@@ -34,10 +34,10 @@ function tripal_analysis_interpro_node_info() {
 /*******************************************************************************
  *  Provide a Interpro Analysis form
  */
-function chado_analysis_interpro_form($node) {
+function chado_analysis_interpro_form($node, $form_state) {
 
    // add in the default fields for the analysis
-   $form = chado_analysis_form($node);
+   $form = chado_analysis_form($node, $form_state);
 
    $analysis = $node->analysis;
 
@@ -401,21 +401,26 @@ function tripal_analysis_interpro_theme_registry_alter(&$info) {
  *  look and feel of the output generated in this module
  */
 function tripal_analysis_interpro_theme() {
+	
   $path = drupal_get_path('module' , 'tripal_analysis_interpro') . '/theme';
+  
   return array(
-      'parse_EBI_Interpro_XML_index_version' => array(
-         'arguments' => array('node'),
-     ),
-      'tripal_feature_interpro_results' => array(
-         'arguments' => array('node' => NULL),
-         'template' => 'tripal_feature_interpro_results',
-         'path' => $path . '/tripal_feature',
-     ),
-      'tripal_analysis_interpro_base' => array(
-         'arguments' => array('node' => NULL),
-         'template' => 'tripal_analysis_interpro_base',
-         'path' => $path . '/tripal_analysis_interpro',
-     )
+    'parse_EBI_Interpro_XML_index_version' => array(
+      'arguments' => array('node'),
+    ),
+    'tripal_feature_interpro_results' => array(
+      'arguments' => array('node' => NULL),
+      'template' => 'tripal_feature_interpro_results',
+      'path' => $path . '/tripal_feature',
+    ),
+    'tripal_analysis_interpro_base' => array(
+      'arguments' => array('node' => NULL),
+      'template' => 'tripal_analysis_interpro_base',
+      'path' => $path . '/tripal_analysis_interpro',
+    ),
+    'chado_analysis_interpro_node_form' => array(
+      'arguments' => array('form'),
+    ),
   );
 }
 /*******************************************************************************
@@ -457,21 +462,21 @@ function theme_parse_EBI_Interpro_XML_index_version($node) {
 function tripal_get_interpro_XML_results($feature_id) {
 
   // Get the blast results stored as XML from the analysisfeatureprop table
-   // the type for the property is named 'analysis_blast_output_iteration_hits'
-   // and is found in the 'tripal' controlled vocabulary.  This CV term was
-   // added by this module.
-   $select = array(
-      'analysisfeature_id' => array(
-         'feature_id' => $feature_id,
+  // the type for the property is named 'analysis_blast_output_iteration_hits'
+  // and is found in the 'tripal' controlled vocabulary.  This CV term was
+  // added by this module.
+  $select = array(
+    'analysisfeature_id' => array(
+       'feature_id' => $feature_id,
+    ),
+    'type_id' => array(
+      'name' => 'analysis_interpro_xmloutput_hit',
+      'cv_id' => array(
+        'name' => 'tripal'          
       ),
-      'type_id' => array(
-         'name' => 'analysis_interpro_xmloutput_hit',
-         'cv_id' => array(
-            'name' => 'tripal'
-         ),
-      ),
-   );
-   $afeatureprops = tripal_core_chado_select('analysisfeatureprop', array('*'), $select);
+    ),
+  );
+  $afeatureprops = tripal_core_chado_select('analysisfeatureprop', array('*'), $select);
 
    // iterate through all of the interpro XML properties for this feature
   $results = array();
@@ -488,10 +493,10 @@ function tripal_get_interpro_XML_results($feature_id) {
             array('analysis_id' => $analysisfeature->analysis_id));
          $analysis_id = $analysis->analysis_id;
 
-         // parse the XML and add it to the array of blast results to be returned
+         // parse the XML and add it to the array of results to be returned
          $interpro_xml = $afeatureprop->value;
          $orf = tripal_analysis_interpro_get_result_object($interpro_xml, $feature_id);
-       $results[$analysis->analysis_id]['protein_ORFs'][] = $orf;
+         $results[$analysis->analysis_id]['protein_ORFs'][] = $orf;
          $results[$analysis->analysis_id]['analysis'] = $analysis;
 
          // iterate through all of the protein ORFs and combine the terms into one large list
@@ -718,4 +723,21 @@ function tripal_analysis_interpro_job_describe_args($callback, $args) {
    }
    return $new_args;
 }
+/**
+ * 
+ * @param unknown_type $form
+ */
+function theme_chado_analysis_interpro_node_form($form) {
 
+  $properties_table = tripal_analysis_theme_node_form_properties($form);
+  $markup .= $properties_table;
+
+  $form['properties']['table'] = array(
+    '#type' => 'markup',
+    '#value' =>  $markup,
+    '#prefix' => '<div id="tripal-analysis-edit-properties-table">',
+    '#suffix' => '</div>',
+  );
+  $form['buttons']['#weight'] = 50;
+  return drupal_render($form);
+}

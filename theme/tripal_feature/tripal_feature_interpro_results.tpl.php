@@ -2,7 +2,6 @@
 $feature  = $variables['node']->feature;
 $results = $feature->tripal_analysis_interpro->results->xml;
 $resultsHTML = $feature->tripal_analysis_interpro->results->html;
-
 if(count($results) > 0){ 
    $i = 0;
    foreach($results as $analysis_id => $analysisprops){ 
@@ -65,7 +64,7 @@ if(count($results) > 0){
           } 
           ?>          
             <tr>
-              <td colspan="4" style="padding-left: 0px">ORF: <?php print $orf['orf_id'] ?>, Length: <?php print $orf['orf_length'] ?> <br>
+              <td colspan="4" style="padding-left: 0px"><br>ORF: <?php print $orf['orf_id'] ?>, Length: <?php print $orf['orf_length'] ?> <br>
                               IPR Term: <a href="http://www.ebi.ac.uk/interpro/IEntry?ac=<?php print $ipr_id ?>" target="_ipr"><?php print $ipr_id ?></a> <?php print " $ipr_name ($ipr_type)"; ?></th>
             </tr>
             <tr style="border-top: solid 1px;">

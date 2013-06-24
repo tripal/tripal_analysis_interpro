@@ -210,9 +210,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
     }
     $feature_id = $feature_arr[0]->feature_id;
 
-  
-     
-    // Successfully matched. print 'Succeeded'. Add analysis_id and
+    // Successfully matched. Add analysis_id and
     // feature_id to analysisfeature. Add the table as XML to analysisfeatureprop
     if ($feature_id) {
 
@@ -228,9 +226,10 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       }
 
       // Insert interpro xml results into analysisfeatureprop table
-      // but first check to see if we have an existing entry
+      // but first check to see if we have an existing entry, if we do, then
+      // increment the rank
       $sql = "
-         SELECT analysisfeatureprop_id,rank
+         SELECT analysisfeatureprop_id, rank
          FROM {analysisfeatureprop}
          WHERE analysisfeature_id = %d AND type_id = %d
          ORDER BY rank DESC
@@ -240,19 +239,18 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       if ($result) {
         $rank = $result->rank + 1;
       }
-      else {
-        $values = array(
-          'analysisfeature_id' => $analysisfeature_id,
-          'type_id' => $type_id,
-          'value' => $protein->asXML(),
-          'rank' => $rank,
-        );
-        $options = array('statement_name' => 'ins_analysisfeatureprop_antyvara');
-        $success = tripal_core_chado_insert('analysisfeatureprop', $values, $options);
-        if (!$success) {
-          watchdog('tr_ipr_parse', 'ERROR: cannot add the XML for the feature into the analysisfeatureprop table',
-            array(), WATCHDOG_ERROR);
-        }
+      
+      $values = array(
+        'analysisfeature_id' => $analysisfeature_id,
+        'type_id' => $type_id,
+        'value' => $protein->asXML(),
+        'rank' => $rank,
+      );
+      $options = array('statement_name' => 'ins_analysisfeatureprop_antyvara');
+      $success = tripal_core_chado_insert('analysisfeatureprop', $values, $options);
+      if (!$success) {
+        watchdog('tr_ipr_parse', 'ERROR: cannot add the XML for the feature into the analysisfeatureprop table',
+          array(), WATCHDOG_ERROR);
       }
        
       // parse the XML and add the IPR terms individually to the analysisfeatureprop table
