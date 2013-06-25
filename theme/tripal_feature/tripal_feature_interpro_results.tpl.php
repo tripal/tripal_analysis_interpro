@@ -39,7 +39,7 @@ if(count($results) > 0){
          $class = 'tripal_feature-table-even-row tripal-table-even-row';
        }?>
        <tr class="<?php print $class ?>">
-         <td><a href="http://www.ebi.ac.uk/interpro/IEntry?ac=<?php print $ipr_id ?>" target="_ipr"><?php print $ipr_id ?></a></td>
+         <td><a href="http://www.ebi.ac.uk/interpro/entry/<?php print $ipr_id ?>" target="_ipr"><?php print $ipr_id ?></a></td>
          <td><?php print $ipr_name ?></td>         
        </tr>
        <?php
