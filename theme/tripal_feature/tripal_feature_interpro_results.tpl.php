@@ -2,7 +2,40 @@
 $feature  = $variables['node']->feature;
 $results = $feature->tripal_analysis_interpro->results->xml;
 $resultsHTML = $feature->tripal_analysis_interpro->results->html;
-if(count($results) > 0){ 
+if(count($results) > 0){
+	// Do not show Interpro result and the sidebar link if the it contains only 'noIPR'
+   $emptyResult = true; 
+   foreach($results as $analysis_id => $analysisprops){
+   	  $terms = $analysisprops['allterms'];
+   	  $protein_ORFs = $analysisprops['protein_ORFs'];
+   	  foreach($terms as $term){
+   	  	$ipr_id = $term[0];
+   	  	$ipr_name = $term[1];
+   	  	if(strcmp($ipr_id,'noIPR')==0){
+   	  		continue;
+   	  	} else {
+   	  		$emptyResult = false;
+   	  	}
+   	  }
+   	  foreach($protein_ORFs as $orf){
+   	  	$terms = $orf['terms'];
+   	  	$orf = $orf['orf'];
+           foreach($terms as $term){ 
+   	            $matches = $term['matches'];
+   	            $ipr_id = $term['ipr_id'];
+   	            $ipr_name = $term['ipr_name'];
+   	            $ipr_type = $term['ipr_type']; 
+   	            if(strcmp($ipr_id,'noIPR')==0){
+   	               continue;
+   	            } else {
+   	               $emptyResult = false;
+   	            }
+           }
+   	  }
+   	  if ($emptyResult) {
+   	  	return;
+   	  }
+   }
    $i = 0;
    foreach($results as $analysis_id => $analysisprops){ 
      $analysis = $analysisprops['analysis'];
@@ -61,7 +94,7 @@ if(count($results) > 0){
           $ipr_type = $term['ipr_type']; 
           if(strcmp($ipr_id,'noIPR')==0){
              continue;
-          } 
+          }
           ?>          
             <tr>
               <td colspan="4" style="padding-left: 0px"><br>ORF: <?php print $orf['orf_id'] ?>, Length: <?php print $orf['orf_length'] ?> <br>
