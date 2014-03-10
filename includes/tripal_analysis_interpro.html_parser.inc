@@ -26,7 +26,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
       "INNER JOIN {cv} ON cv.cv_id = CVT.cv_id ".
       "WHERE CVT.name = 'analysis_interpro_output_hit' ".
       "AND CV.name = 'tripal'";
-  $type_id = db_result(chado_query($sql));
+  $type_id = chado_query($sql)->fetchField();
   print "cvterm_id for analysis_interpro_output_iteration_hits is $type_id\n";
 
   // Load the HTML file and convert it into XML for loading
@@ -76,14 +76,14 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
 
             // Find out how many features match this uniquename
             $sql = "SELECT count(feature_id) FROM {feature} ".
-                "WHERE uniquename = '%s' ";
-            $no_features = db_result(chado_query($sql, $seqname));
+                "WHERE uniquename = :uniquename ";
+            $no_features = chado_query($sql, array(':uniquename' => $seqname))->fetchField();
 
             // If there is only one match, get the feature_id
             if ($no_features == 1) {
               $sql = "SELECT feature_id FROM {feature} ".
-                  "WHERE uniquename = '%s' ";
-              $feature_id = db_result(chado_query($sql, $seqname));
+                  "WHERE uniquename = :uniquename ";
+              $feature_id = chado_query($sql, array(':uniquename' => $seqname))->fetchField();
               print "\tfeature id is $feature_id\n";
 
               // If the uniquename matches more than one features then skip and print 'Ambiguous'
@@ -139,18 +139,18 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         // If this feature has already been associated with this analysis, do not reinsert
         // Otherwise, Insert into analysisfeature table
         //------------------------------------
-        $sql = "Select analysisfeature_id as id from {analysisfeature} where feature_id = %d and analysis_id = %d";
-        $analysisfeature =  db_fetch_object(chado_query($sql, $feature_id, $analysis_id));
+        $sql = "Select analysisfeature_id as id from {analysisfeature} where feature_id = :feature_id and analysis_id = :analysis_id";
+        $analysisfeature =  chado_query($sql, array(':feature_id' => $feature_id, ':analysis_id' => $analysis_id))->fetchObject();
         if ($analysisfeature) {
           $analysisfeature_id = $analysisfeature->id;
         }
         if (!$analysisfeature_id) {
           print "inserting analysisfeature\n";
           $sql = "INSERT INTO {analysisfeature} (feature_id, analysis_id) ".
-              "VALUES (%d, %d)";
-          chado_query($sql, $feature_id, $analysis_id);
-          $sql = "Select analysisfeature_id from {analysisfeature} where feature_id = %d and analysis_id = %d";
-          $analysisfeature =  db_fetch_object(chado_query($sql, $feature_id, $analysis_id));
+              "VALUES (:feature_id, :analysis_id)";
+          chado_query($sql, array(':feature_id' => $feature_id, ':analysis_id' => $analysis_id));
+          $sql = "Select analysisfeature_id from {analysisfeature} where feature_id = :feature_id and analysis_id = :analysis_id";
+          $analysisfeature =  chado_query($sql, array(':feature_id' => $feature_id, ':analysis_id' => $analysis_id))->fetchObject();
           $analysisfeature_id = $analysisfeature->id;
         }
 
@@ -162,11 +162,11 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         // analysisfeaturepro with 'higest_rank + 1'
         $sql = "SELECT MAX(rank) FROM {analysisfeatureprop} AFP ".
             "INNER JOIN {analysisfeature} AF ON AF.analysisfeature_id = AFP.analysisfeature_id ".
-            "WHERE feature_id=%d ".
-            "AND analysis_id=%d ".
-            "AND type_id=%d ";
+            "WHERE feature_id = :feature_id ".
+            "AND analysis_id = :analysis_id ".
+            "AND type_id = :type_id ";
 
-        $afp =  db_fetch_object(chado_query($sql, $feature_id, $analysis_id, $type_id));
+        $afp =  chado_query($sql, array(':feature_id' => $feature_id, ':analysis_id' => $analysis_id, ':type_id' => $type_id))->fetchObject();
         $hi_rank = 0;
         if ($afp) {
           $hi_rank = $afp->max + 1;
@@ -176,18 +176,18 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         // Insert interpro html tags into analysisfeatureprop table
         //------------------------------------------------------------
         // Before inserting, make sure it's not a duplicate
-        $sql = "SELECT value FROM {analysisfeatureprop} WHERE analysisfeature_id = %d AND type_id = %d";
-        $result = chado_query($sql, $analysisfeature_id, $type_id);
+        $sql = "SELECT value FROM {analysisfeatureprop} WHERE analysisfeature_id = :analysisfeature_id AND type_id = :type_id";
+        $result = chado_query($sql, array(':analysisfeature_id' => $analysisfeature_id, ':type_id' => $type_id));
         $duplicate = 0;
-        while ($afp_value = db_fetch_object($result)) {
+        while ($afp_value = $result->fetchObject()) {
           if ($table_txt == $afp_value->value) {
             $duplicate = 1;
           }
         }
         if (!$duplicate) {
           $sql = "INSERT INTO {analysisfeatureprop} (analysisfeature_id, type_id, value, rank)".
-              "VALUES (%d, %d, '%s', %d)";
-          chado_query($sql, $analysisfeature_id, $type_id, $table_txt, $hi_rank);
+              "VALUES (:analysisfeature_id, :type_id, :value, :rank)";
+          chado_query($sql, array(':analysisfeature_id' => $analysisfeature_id, ':type_id' => $type_id, ':value' => $table_txt, ':rank' => $hi_rank));
           fwrite($log, " (Insert)\n"); // write to log
           print "\twriting table\n";
         } 
@@ -197,7 +197,7 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
         }
 
         // Parse GO terms. Make sure GO database schema is installed in chado
-        $go_db_id = db_result(chado_query("SELECT db_id FROM {db} WHERE name='GO'"));
+        $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name='GO'")->fetchField();
         if (!$go_db_id) {
           print 'GO schema not installed in chado. GO terms are not processed.';
         }
@@ -214,23 +214,23 @@ function tripal_analysis_interpro_parseHTMLFile($analysis_id, $interprofile, $pa
                   // Find cvterm_id for the matched GO term
                   $sql = "SELECT cvterm_id FROM {cvterm} CVT
                   INNER JOIN {dbxref} DBX ON CVT.dbxref_id = DBX.dbxref_id
-                  WHERE DBX.accession = '%s' AND DBX.db_id = %d";
-                  $goterm_id = db_result(chado_query($sql, $matches[1], $go_db_id));
+                  WHERE DBX.accession = :accession AND DBX.db_id = :db_id";
+                  $goterm_id = chado_query($sql, array(':accession' => $matches[1], ':db_id' => $go_db_id))->fetchField();
                    
                   //-------------------------------------------
                   // Insert GO terms into feature_cvterm table
                   //-------------------------------------------
                   // Default pub_id = 1 (NULL) was used
                   $sql = "INSERT INTO {feature_cvterm} (feature_id, cvterm_id, pub_id)
-                  VALUES (%d, %d, 1)";
-                  chado_query($sql, $feature_id, $goterm_id);
+                  VALUES (:feature_id, :cvterm_id, 1)";
+                  chado_query($sql, array(':feature_id' => $feature_id, ':cvterm_id' => $goterm_id));
 
                   //------------------------------------------------
                   // Insert GO terms into analysisfeatureprop table
                   //------------------------------------------------
                   $sql = "INSERT INTO {analysisfeatureprop} (analysisfeature_id, type_id, value, rank) ".
-                      "VALUES (%d, %d, '%s', 0)";
-                  chado_query($sql, $analysisfeature_id, $goterm_id, $matches[1]);
+                      "VALUES (:analysisfeature_id, :type_id, :value, 0)";
+                  chado_query($sql, array(':analysisfeature_id' => $analysisfeature_id, ':type_id' => $goterm_id, ':value' => $matches[1]));
                 }
               }
             }

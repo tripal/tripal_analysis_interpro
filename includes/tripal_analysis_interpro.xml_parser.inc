@@ -5,28 +5,7 @@
  * The interpro XML parser
  */
 function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
-    $parsego, $query_re, $query_type, $query_uniquename, $job_id) {
-
-  // make sure we have a persistent db connection
-  $connection = tripal_db_persistent_chado();
-  if (!$connection) {
-    watchdog('tr_ipr_parse',"NOTICE: Cannot create persistent connection to the database. Uploading may be slow", 
-        array(), 'notice');
-      exit;  
-  }
-  
-  // begin the transaction
-  tripal_db_start_transaction();
-      
-  // if we cannot get a connection then let the user know the loading will be slow
-  if (!$connection) {
-     print "A persistant connection was not obtained. Loading will be slow\n";
-  }
-  else {
-     print "\nNOTE: Loading of these InterPro results is performed using a database transaction. \n" .
-           "If the load fails or is terminated prematurely then the entire set of \n" .
-           "insertions/updates is rolled back and will not be found in the database\n\n";
-  }
+  $parsego, $query_re, $query_type, $query_uniquename, $job_id) {
   
   // clear out the anslysisfeature table for this analysis before getting started
   tripal_core_chado_delete('analysisfeature', array('analysis_id' => $analysis_id));
@@ -58,8 +37,6 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
     }
   }
 
-  // commit the transaction
-  tripal_db_commit_transaction();
   print "\nDone\n";     
 }
 /**
@@ -82,7 +59,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       CVT.name = 'analysis_interpro_xmloutput_hit' AND
       CV.name = 'tripal'
   ";
-  $type_id = db_result(chado_query($sql));
+  $type_id = chado_query($sql)->fetchField();
 
   // Load the XML file
   $xml =  simplexml_load_file($interproxmlfile);
@@ -123,7 +100,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
 
   // get the DB id for the GO database
   $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
-  $go_db_id = db_result(chado_query("SELECT db_id FROM {db} WHERE name='GO'"));
+  $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name='GO'")->fetchField();
   if ($parsego and !$go_db_id) {
     watchdog('tr_ipr_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
   }
@@ -231,10 +208,10 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       $sql = "
          SELECT analysisfeatureprop_id, rank
          FROM {analysisfeatureprop}
-         WHERE analysisfeature_id = %d AND type_id = %d
+         WHERE analysisfeature_id = :analysisfeature_id AND type_id = :type_id
          ORDER BY rank DESC
       ";
-      $result = db_fetch_object(chado_query($sql, $analysisfeature_id, $type_id));
+      $result = chado_query($sql, array(':analysisfeature_id' => $analysisfeature_id, ':type_id' => $type_id))->fetchObject();
       $rank = 0;
       if ($result) {
         $rank = $result->rank + 1;
@@ -331,8 +308,8 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
             $sql = "SELECT cvterm_id
             FROM {cvterm} CVT
             INNER JOIN {dbxref} DBX ON CVT.dbxref_id = DBX.dbxref_id
-            WHERE DBX.accession = '%s' AND DBX.db_id = %d";
-            $goterm_id = db_result(chado_query($sql, $matches[1], $go_db_id));
+            WHERE DBX.accession = :accession AND DBX.db_id = :db_id";
+            $goterm_id = chado_query($sql, array(':accession' => $matches[1], ':db_id' => $go_db_id))->fetchField();
             if (!$goterm_id) {
               watchdog('tr_ipr_parse', "Cannot find GO cvterm: 'GO:%term'. skipping.", 
                 array('%term' => $matches[1]), WATCHDOG_WARNING);
