@@ -57,7 +57,6 @@ function chado_analysis_interpro_form($node, $form_state) {
   // set the fedaults
   $interprofile = '';
   $interprojob = '';
-  $parseHTML = '';
   $parsego = '';
   $interproparameters = '';
   $query_re = '';
@@ -69,7 +68,6 @@ function chado_analysis_interpro_form($node, $form_state) {
     $interprofile = $analysis->tripal_analysis_interpro->interprofile;
     $interproparameters = $analysis->tripal_analysis_interpro->interproparameters;
     $parsego = $analysis->tripal_analysis_interpro->parsego;
-    $parseHTML = $analysis->tripal_analysis_interpro->parseHTML;
     $query_re = $analysis->tripal_analysis_interpro->query_re;
     $query_type = $analysis->tripal_analysis_interpro->query_type;
     $query_uniquename = $analysis->tripal_analysis_interpro->query_uniquename;
@@ -101,12 +99,6 @@ function chado_analysis_interpro_form($node, $form_state) {
       '#attributes' => array(
           'onclick' => 'return isSubmittingJob(this)'
       )
-  );
-  $form['interpro']['parseHTML'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('The input file is in HTML format (deprecated, only provided for backwards compatibility)'),
-      '#description' => t('Check the box to use the HTML parser.'),
-      '#default_value' => $parseHTML
   );
   $form['interpro']['parsego'] = array(
       '#type' => 'checkbox',
@@ -176,7 +168,6 @@ function chado_analysis_interpro_load($nodes) {
     $interprofile      = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_interprofile');
     $interproparameters= tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_interproparameters');
     $parsego           = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_parsego');
-    $parseHTML         = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_parseHTML');
     $query_re          = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_re');
     $query_type        = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_type');
     $query_uniquename  = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_uniquename');
@@ -185,7 +176,6 @@ function chado_analysis_interpro_load($nodes) {
     $analysis->tripal_analysis_interpro->interprofile      = $interprofile->value;
     $analysis->tripal_analysis_interpro->interproparameters= $interproparameters->value;
     $analysis->tripal_analysis_interpro->parsego           = $parsego->value;
-    $analysis->tripal_analysis_interpro->parseHTML         = $parseHTML->value;
     $analysis->tripal_analysis_interpro->query_re          = $query_re->value;
     $analysis->tripal_analysis_interpro->query_type        = $query_type->value;
     $analysis->tripal_analysis_interpro->query_uniquename  = $query_uniquename->value;
@@ -224,7 +214,6 @@ function chado_analysis_interpro_insert($node) {
     tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interprofile', trim($node->interprofile));
     tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interproparameters', trim($node->interproparameters));
     tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_parsego', trim($node->parsego));
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_parseHTML', trim($node->parseHTML));
     tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_re', trim($node->query_re));
     tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_type', trim($node->query_type));
     tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_uniquename', trim($node->query_uniquename));
@@ -248,7 +237,6 @@ function chado_analysis_interpro_update($node) {
   tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_interprofile', trim($node->interprofile), 1);
   tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_interproparameters', trim($node->interproparameters), 1);
   tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_parsego', trim($node->parsego), 1);
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_parseHTML', trim($node->parseHTML), 1);
   tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_query_re', trim($node->query_re), 1);
   tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_query_type', trim($node->query_type), 1);
   tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_query_uniquename', trim($node->query_uniquename), 1);
@@ -276,7 +264,7 @@ function chado_analysis_interpro_delete($node) {
 function chado_analysis_interpro_submit_job($node) {
   global $user;
 
-  // Add a job if the user wants to parse the html output
+  // Add a job if the user wants to parse the xml output
   if ($node->interprojob) {
   $job_args[0] = $node->analysis_id;
   $job_args[1] = $node->interprofile;
@@ -290,15 +278,10 @@ function chado_analysis_interpro_submit_job($node) {
 
   if (is_readable ( $node->interprofile )) {
       $fname = preg_replace ( "/.*\/(.*)/", "$1", $node->interprofile );
-      if ($node->parseHTML) {
-        tripal_add_job ( "Parse HTML interpro: $fname", 'tripal_analysis_interpro', 'tripal_analysis_interpro_parseHTMLFile', $job_args, $user->uid );
-      } else {
         $job_args [3] = $node->query_re;
         $job_args [4] = $node->query_type;
         $job_args [5] = $node->query_uniquename;
-        ;
         tripal_add_job ( "Parse XML interpro: $fname", 'tripal_analysis_interpro', 'tripal_analysis_interpro_parseXMLFile', $job_args, $user->uid );
-      }
     } else {
       drupal_set_message ( "Can not open interpro output file. Job not scheduled." );
     }

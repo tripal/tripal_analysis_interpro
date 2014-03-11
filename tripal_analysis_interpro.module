@@ -1,6 +1,5 @@
 <?php
 require_once "includes/tripal_analysis_interpro.chado_node.inc";
-require_once "includes/tripal_analysis_interpro.html_parser.inc";
 require_once "includes/tripal_analysis_interpro.xml_parser.inc";
 
 /*******************************************************************************
