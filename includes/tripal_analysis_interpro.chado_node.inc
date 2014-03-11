@@ -128,8 +128,7 @@ function chado_analysis_interpro_form($node, $form_state) {
   $form['interpro']['query_uniquename'] = array(
       '#title' => t('Use Unique Name'),
       '#type' => 'checkbox',
-      '#description' => t('Select this checboxk if the query name in the results file '.
-          'matches the unique name of the feature. '),
+      '#description' => t('Select this checkbox if the query name in the results file matches the unique name of the feature. '),
       '#default_value' => $query_uniquename,
   );
 
@@ -137,7 +136,7 @@ function chado_analysis_interpro_form($node, $form_state) {
       '#title' => t('Query Type'),
       '#type' => 'textfield',
       '#description' => t('Please enter the Sequence Ontology term (e.g. contig, polypeptide, mRNA) that describes '.
-          'the query sequences in the interproscan XML results file(s).  This is only necessary if two '.
+          'the query sequences in the InterProScan XML results file(s).  This is only necessary if two '.
           'or more sequences have the same name.'),
       '#default_value' => $query_type,
   );
@@ -147,8 +146,19 @@ function chado_analysis_interpro_form($node, $form_state) {
  *
  */
 function chado_analysis_interpro_validate($node, &$form, &$form_state) {
+  
   // use the analysis parent to validate the node
   tripal_analysis_validate($node, $form, $form_state);
+  
+  // trim character fields
+  $node->interprofile      = trim($node->interprofile);
+  $node->query_uniquename  = trim($node->query_uniquename);
+  $node->query_type        = trim($node->query_type);
+  
+  if($node->interprofile and !is_readable($node->interprofile)) {
+    form_set_error('interprofile', "Can not read InterPro XML output file: '$node->interprofile'. Please check file permissions or typos in the file path.");
+  }
+  
 }
 /**
  *
@@ -195,41 +205,44 @@ function chado_analysis_interpro_load($nodes) {
  *
  */
 function chado_analysis_interpro_insert($node) {
-  // get the analysis_id from the node before the call below
-  $analysis_id = property_exists($node, 'analysis_id') ? $node->analysis_id : 0;
-
+  
   // insert the analysis. If the analysis already exist then this
   // call will link it to a new Drupa node.
   chado_analysis_insert($node);
 
-  // If this analysis already exists then don't recreate it in chado. This can happen
-  // when nodes are synced.  They already exist but Drupal doesn't know it and calls
-  // this function.
-  if (!$analysis_id) {
+  // trim character fields
+  $node->interprofile      = trim($node->interprofile);
+  $node->query_uniquename  = trim($node->query_uniquename);
+  $node->query_type        = trim($node->query_type);
+  
+  // set the type for this analysis
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_type', 'tripal_analysis_interpro');
 
-    // set the type for this analysis
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_type', 'tripal_analysis_interpro');
+  // now add in the remaining settings as a single property but separated by bars
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interprofile', trim($node->interprofile));
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interproparameters', trim($node->interproparameters));
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_parsego', trim($node->parsego));
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_re', trim($node->query_re));
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_type', trim($node->query_type));
+  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_uniquename', trim($node->query_uniquename));
 
-    // now add in the remaining settings as a single property but separated by bars
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interprofile', trim($node->interprofile));
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interproparameters', trim($node->interproparameters));
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_parsego', trim($node->parsego));
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_re', trim($node->query_re));
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_type', trim($node->query_type));
-    tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_uniquename', trim($node->query_uniquename));
-
-    // submit the parsing jobs
-    chado_analysis_interpro_submit_job($node);
-  }
+  // submit the parsing jobs
+  chado_analysis_interpro_submit_job($node);
 }
 
 /**
   *
   */
 function chado_analysis_interpro_update($node) {
+
   // insert the analysistripal_core_generate_chado_var
   chado_analysis_update($node);
 
+  // trim character fields
+  $node->interprofile      = trim($node->interprofile);
+  $node->query_uniquename  = trim($node->query_uniquename);
+  $node->query_type        = trim($node->query_type);
+  
   // set the type for this analysis
   tripal_analysis_update_property($node->analysis_id, 'analysis_type', 'tripal_analysis_interpro', 1);
 
@@ -251,40 +264,35 @@ function chado_analysis_interpro_update($node) {
   chado_analysis_interpro_submit_job($node);
 }
 
-/*******************************************************************************
-  * Delete interpro anlysis
-  */
+/**
+ * Delete interpro anlysis
+ */
 function chado_analysis_interpro_delete($node) {
   chado_analysis_delete($node);
 }
 
 /**
-  *
-  */
+ *
+ */
 function chado_analysis_interpro_submit_job($node) {
   global $user;
 
   // Add a job if the user wants to parse the xml output
   if ($node->interprojob) {
-  $job_args[0] = $node->analysis_id;
-  $job_args[1] = $node->interprofile;
-  if ($node->parsego) {
-  $job_args[2] = 1;
-  }
-  else {
-  $job_args[2] = 0;
-  }
-
-
-  if (is_readable ( $node->interprofile )) {
-      $fname = preg_replace ( "/.*\/(.*)/", "$1", $node->interprofile );
-        $job_args [3] = $node->query_re;
-        $job_args [4] = $node->query_type;
-        $job_args [5] = $node->query_uniquename;
-        tripal_add_job ( "Parse XML interpro: $fname", 'tripal_analysis_interpro', 'tripal_analysis_interpro_parseXMLFile', $job_args, $user->uid );
-    } else {
-      drupal_set_message ( "Can not open interpro output file. Job not scheduled." );
+    $job_args[0] = $node->analysis_id;
+    $job_args[1] = $node->interprofile;
+    if ($node->parsego) {
+      $job_args[2] = 1;
     }
+    else {
+      $job_args[2] = 0;
+    }
+
+    $fname = preg_replace ( "/.*\/(.*)/", "$1", $node->interprofile );
+    $job_args [3] = $node->query_re;
+    $job_args [4] = $node->query_type;
+    $job_args [5] = $node->query_uniquename;
+    tripal_add_job("Parse XML interpro: $fname", 'tripal_analysis_interpro', 'tripal_analysis_interpro_parseXMLFile', $job_args, $user->uid);
   }
 }
 
@@ -338,6 +346,15 @@ function tripal_analysis_interpro_node_view($node, $view_mode, $langcode) {
       if ($view_mode == 'teaser') {
         $node->content['tripal_analysis_interpro_teaser'] = array(
             '#markup' => theme('tripal_analysis_interpro_teaser', array('node' => $node)),
+        );
+      }
+      break;
+    case 'chado_feature':
+      if ($view_mode == 'full') {
+        $node->content['tripal_feature_interpro_results'] = array(
+          '#markup' => theme('tripal_feature_interpro_results', array('node' => $node)),
+          '#tripal_toc_id'    => 'interpro',
+          '#tripal_toc_title' => 'InterPro Report',
         );
       }
       break;
