@@ -5,17 +5,18 @@
 function tripal_analysis_interpro_preprocess_tripal_feature_interpro_results(&$variables) {
   $feature = $variables['node']->feature;
 
-  // we don't know how many analysis are the old style HTML version and how many are the newer
-  // XML format.  So, to be backwards compatible we should get both.
-  // $feature->tripal_analysis_interpro->results->html = tripal_get_interpro_HTML_results($feature->feature_id);
   $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
-  if (!is_object($feature->tripal_analysis_interpro)) {
+  if (!property_exists($feature, 'tripal_analysis_interpro')) {
     $feature->tripal_analysis_interpro = new stdClass;
   }
-  if (!is_object($feature->tripal_analysis_interpro->results)) {
+  if (!property_exists($feature->tripal_analysis_interpro, 'results')) {
     $feature->tripal_analysis_interpro->results = new stdClass;
   }
   $feature->tripal_analysis_interpro->results->xml = $xml_results;
+  
+  // we don't know how many analysis are the old style HTML version and how many are the newer
+  // XML format.  So, to be backwards compatible we should get both.
+  $feature->tripal_analysis_interpro->results->html = tripal_get_interpro_HTML_results($feature->feature_id);
 }
 
 /**
@@ -62,15 +63,14 @@ function tripal_get_interpro_XML_results($feature_id) {
       $results[$analysis->analysis_id]['analysis'] = $analysis;
 
       // iterate through all of the protein ORFs and combine the terms into one large list
-      if (!is_array($results[$analysis->analysis_id]['allterms'])) {
+      if (!array_key_exists('allterms', $results[$analysis->analysis_id])) {
         $results[$analysis->analysis_id]['allterms'] = array();
       }
-      if (!is_array($results[$analysis->analysis_id]['goterms'])) {
+      if (!array_key_exists('go_terms', $results[$analysis->analysis_id])) {
         $results[$analysis->analysis_id]['goterms'] = array();
       }
       $results[$analysis->analysis_id]['allterms'] = array_merge($results[$analysis->analysis_id]['allterms'], $orf['iprterms']);
       $results[$analysis->analysis_id]['goterms'] = array_merge($results[$analysis->analysis_id]['goterms'], $orf['goterms']);
-      $i++;
     }
   }
   return $results;
@@ -81,40 +81,44 @@ function tripal_get_interpro_XML_results($feature_id) {
  * Get interpro result from featureprop table for the feature
  */
 function tripal_get_interpro_HTML_results($feature_id) {
+  $content = '';
+  
   // Get cvterm_id for 'analysis_interpro_output_hit' which is required
   // for inserting into the analysisfeatureprop table
-
-  $sql = "SELECT CVT.cvterm_id FROM {cvterm} CVT
-          INNER JOIN {cv} ON cv.cv_id = CVT.cv_id
-          WHERE CVT.name = 'analysis_interpro_output_hit'
-          AND CV.name = 'tripal'";
+  $sql = "
+    SELECT CVT.cvterm_id 
+    FROM {cvterm} CVT
+      INNER JOIN {cv} ON cv.cv_id = CVT.cv_id
+    WHERE CVT.name = 'analysis_interpro_output_hit' AND CV.name = 'tripal'";
   $type_id = chado_query($sql)->fetchField();
 
   // Get analysis times for the feature
-  $sql = "SELECT A.analysis_id AS aid
-          FROM {analysis} A
-          INNER JOIN {analysisfeature} AF ON A.analysis_id = AF.analysis_id
-          INNER JOIN {analysisfeatureprop} AFP ON AF.analysisfeature_id = AFP.analysisfeature_id
-          WHERE feature_id = :feature_id
-          AND AFP.type_id = :type_id
-          AND AFP.value NOT like '%No hits reported.%'
-           AND AFP.value NOT like '%parent%'
-           AND AFP.value NOT like '%children%'
-          GROUP BY A.analysis_id
-         ";
+  $sql = "
+    SELECT A.analysis_id AS aid
+    FROM {analysis} A
+      INNER JOIN {analysisfeature} AF ON A.analysis_id = AF.analysis_id
+      INNER JOIN {analysisfeatureprop} AFP ON AF.analysisfeature_id = AFP.analysisfeature_id
+    WHERE feature_id = :feature_id
+       AND AFP.type_id = :type_id
+       AND AFP.value NOT like '%No hits reported.%'
+       AND AFP.value NOT like '%parent%'
+       AND AFP.value NOT like '%children%'
+    GROUP BY A.analysis_id
+  ";
   $hasResult = chado_query($sql, array(':feature_id' => $feature_id, ':type_id' => $type_id))->fetchField();
   $result = chado_query($sql, array(':feature_id' => $feature_id, ':type_id' => $type_id));
 
   // Show interpro result ORDER BY time
   if ($hasResult) { // If there is any result, show expandable box
-    $content .= "<table class=\"tripal_interpro_results_table\">
-                         <tr><td>";
+    $content .= "<table class=\"tripal_interpro_results_table\"><tr><td>";
 
     while ($ana = $result->fetchObject()) {
       // Show analysis date
-      $sql = "SELECT name, to_char(timeexecuted, 'MM-DD-YYYY') AS time
-               FROM {analysis}
-               WHERE analysis_id = :analysis_id";
+      $sql = "
+        SELECT name, to_char(timeexecuted, 'MM-DD-YYYY') AS time
+        FROM {analysis}
+        WHERE analysis_id = :analysis_id
+      ";
       $ana_details = chado_query($sql, array(':analysis_id' => $ana->aid))->fetchObject();
       // Find node id for the analysis
        
@@ -123,20 +127,20 @@ function tripal_get_interpro_HTML_results($feature_id) {
        
 
       // Show content
-      $content .= "<strong>Analysis Date:</strong> $ana_details->time
-      (<a href=$ana_url>$ana_details->name</a>)";
+      $content .= "<strong>Analysis Date:</strong> $ana_details->time (<a href=$ana_url>$ana_details->name</a>)";
 
       // Show interpro results
-      $sql = "SELECT AFP.value AS afpvalue
-                 FROM {analysisfeatureprop} AFP
-                 INNER JOIN {analysisfeature} AF on AF.analysisfeature_id = AFP.analysisfeature_id
-                 WHERE AF.analysis_id = :analysis_id
-                 AND AF.feature_id = :feature_id
-                 AND AFP.type_id = :type_id
-                 AND AFP.value NOT like '%No hits reported.%'
-                 AND AFP.value NOT like '%parent%'
-                 AND AFP.value NOT like '%children%'
-                ";
+      $sql = "
+        SELECT AFP.value AS afpvalue
+        FROM {analysisfeatureprop} AFP
+          INNER JOIN {analysisfeature} AF on AF.analysisfeature_id = AFP.analysisfeature_id
+        WHERE AF.analysis_id = :analysis_id
+          AND AF.feature_id = :feature_id
+          AND AFP.type_id = :type_id
+          AND AFP.value NOT like '%No hits reported.%'
+          AND AFP.value NOT like '%parent%'
+          AND AFP.value NOT like '%children%'
+      ";
       $interpro_results = chado_query($sql, array(':analysis_id' => $ana->aid, ':feature_id' => $feature_id, ':type_id' => $type_id));
       while ($afp = $interpro_results->fetchObject()) {
         $content .= $afp->afpvalue;

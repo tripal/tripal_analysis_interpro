@@ -354,7 +354,7 @@ function tripal_analysis_interpro_node_view($node, $view_mode, $langcode) {
         $node->content['tripal_feature_interpro_results'] = array(
           '#markup' => theme('tripal_feature_interpro_results', array('node' => $node)),
           '#tripal_toc_id'    => 'interpro',
-          '#tripal_toc_title' => 'InterPro Report',
+          '#tripal_toc_title' => 'InterPro Details',
         );
       }
       break;

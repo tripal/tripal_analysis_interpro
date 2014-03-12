@@ -1,51 +1,25 @@
 <?php
 $feature     = $variables['node']->feature;
-$results     = $feature->tripal_analysis_interpro->results->xml;
-$resultsHTML = $feature->tripal_analysis_interpro->results->html;
+$results     = array();
+$resultsHTML = '';
+
+if (property_exists($feature, 'tripal_analysis_interpro')) {
+  if(property_exists($feature->tripal_analysis_interpro->results, 'xml')) {
+    $results = $feature->tripal_analysis_interpro->results->xml;
+  }
+  if(property_exists($feature->tripal_analysis_interpro->results, 'html')) {
+    $resultsHTML = $feature->tripal_analysis_interpro->results->html;
+  }
+}
 
 if(count($results) > 0){
-  // Do not show Interpro result and the sidebar link if the it contains only 'noIPR'
-  $emptyResult = true; 
-  foreach($results as $analysis_id => $analysisprops){
-    $terms = $analysisprops['allterms'];
-    $protein_ORFs = $analysisprops['protein_ORFs'];
-    foreach($terms as $term){
-      $ipr_id = $term[0];
-      $ipr_name = $term[1];
-      if(strcmp($ipr_id,'noIPR') == 0){
-        continue;
-      } else {
-        $emptyResult = false;
-      }
-    }
-    foreach($protein_ORFs as $orf){
-      $terms = $orf['terms'];
-      $orf = $orf['orf'];
-      foreach($terms as $term){ 
-        $matches  = $term['matches'];
-        $ipr_id   = $term['ipr_id'];
-        $ipr_name = $term['ipr_name'];
-        $ipr_type = $term['ipr_type']; 
-        if(strcmp($ipr_id,'noIPR')==0){
-          continue;
-        } else {
-          $emptyResult = false;
-        }
-      }
-    }
-    if ($emptyResult) {
-      return;
-    }
-  }
-  $i = 0;
   
   $contents = '';
   foreach($results as $analysis_id => $analysisprops){ 
-    $analysis = $analysisprops['analysis'];
+    $analysis     = $analysisprops['analysis'];
     $protein_ORFs = $analysisprops['protein_ORFs']; 
-    $terms = $analysisprops['allterms'];
-    
-    
+    $terms        = $analysisprops['allterms'];
+
     // ANALYSIS DETAILS
     $contents .= "<div><b>Summary of Annotated Terms</b></div>";
     $aname = $analysis->name;
@@ -54,7 +28,7 @@ if(count($results) > 0){
     } 
     $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
     $contents .= "
-      Analysis Name: $analysis_name
+      Analysis Name: $aname
       <br>Date Performed: $date_performed
     ";
     
@@ -104,11 +78,17 @@ if(count($results) > 0){
     
     // ANALYSIS RESULTS
     $contents .= "<div><b>Alignment Details</b><div>";
+    
+    // first iterate through each of the ORFs, each one may have different
+    // protein domains/motifs (i.e. terms)
     foreach($protein_ORFs as $orf){  
       $terms = $orf['terms'];
-      $orf = $orf['orf'];  
+      $orf = $orf['orf'];
       
-      //$contents .= "<br><b>ORF: " . $orf['orf_id'] . ", Length: " . $orf['orf_length'] . "</b><br>";
+      $orf_details = '';
+      
+      // iterate through the protein domains/motifs aligned to within this ORF.
+      // and print the evidence provided from each InterPro member database
       foreach($terms as $term){ 
         $matches  = $term['matches'];
         $ipr_id   = $term['ipr_id'];
@@ -117,8 +97,8 @@ if(count($results) > 0){
         if(strcmp($ipr_id,'noIPR')==0){
           continue;
         }
-        
-        $contents .= "<div>Assigned Term: " . l($ipr_id, "http://www.ebi.ac.uk/interpro/IEntry?ac=$ipr_id", array('attributes' => array('target' => "_ipr"))) . " $ipr_name ($ipr_type)";
+        $orf_details .= "<br>ORF: " . $orf['orf_id'] . ", Length: " . $orf['orf_length'] . "<br>";
+        $orf_details .= "<div>Assigned Term: " . l($ipr_id, "http://www.ebi.ac.uk/interpro/IEntry?ac=$ipr_id", array('attributes' => array('target' => "_ipr"))) . " $ipr_name ($ipr_type)";
         $headers = array(
           array(
             'data' => 'Method',
@@ -139,6 +119,7 @@ if(count($results) > 0){
         );
         $rows = array();
         
+        // iterate through the evidence matches
         foreach ($matches as $match){
           $match_id     = $match['match_id'];
           $match_name   = $match['match_name'];
@@ -180,9 +161,12 @@ if(count($results) > 0){
         );
         // once we have our table array structure defined, we call Drupal's theme_table()
         // function to generate the table.
-        $contents .= theme_table($table);
-        $contents .= '<sup>* score [start-end] status</sup></div><br>';
+        $orf_details .= theme_table($table);
+        $orf_details .= '<sup>* score [start-end] status</sup></div><br>';
       } // end foreach terms
+      if ($orf_details) {
+        $contents .= $orf_details;
+      }
     } // end foreach orfs 
    } // end for each analysis 
    print $contents;
