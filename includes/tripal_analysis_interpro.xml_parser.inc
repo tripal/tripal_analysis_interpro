@@ -48,44 +48,59 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
       
   $filename = preg_replace('/^.*\/(.*)$/' , '$1', $interproxmlfile);
 
-  // Get cvterm_id for 'analysis_interpro_xmloutput_hits' which is required
-  // for inserting into the analysisfeatureprop table
-  $sql = "
-    SELECT 
-      CVT.cvterm_id 
-    FROM {cvterm} CVT 
-      INNER JOIN {cv} ON cv.cv_id = CVT.cv_id 
-    WHERE 
-      CVT.name = 'analysis_interpro_xmloutput_hit' AND
-      CV.name = 'tripal'
-  ";
-  $type_id = chado_query($sql)->fetchField();
-
   // Load the XML file
   $xml =  simplexml_load_file($interproxmlfile);
   if (!$xml) {
     watchdog('tripal_interpro', "Cannot open XML. Please check that it is valid XML.", NULL, WATCHDOG_ERROR);
     return;
   }
-
+  
+  // If starts with 'protein-matches' or 'nucleotide-sequence-matches' then this is InterPro v5 XML
+  $is_xml4 = 0;
+  $is_xml5 = 0;
+  if (preg_match('/^protein-matches/', $xml->getname())) {
+    $is_xml5 = 1;
+  }
+  elseif (preg_match('/^nucleotide-sequence-matches/', $xml->getname())) {
+    $is_xml5 = 1;
+  }
+  
+  // the  remaining are for InterPro v4 XML
+  
   // If there is an EBI header then we need to skip that
   // and set our proteins array to be the second element of the array. This
   // occurs if results were generated with the online InterProScan tool.
   // if the XML starts in with the results then this happens when InterProScan
   // is used command-line and we can just use the object as is
-  if (preg_match('/^EBIInterProScanResults/', $xml->getname())) {
+  elseif (preg_match('/^EBIInterProScanResults/', $xml->getname())) {
     $children = $xml->children();
     $header = $children[0];
     $proteins = $children[1];
+    $is_xml4 = 1;
   }
   // if the XML starts with the <interpro_matches> tag
   elseif (preg_match('/^interpro_matches/', $xml->getname())) {
     $proteins = $xml;
+    $is_xml4 = 1;
   }
   else {
     watchdog('tr_ipr_parse', "ERROR: cannot parse XML file format is not recognized", array(), WATCHDOG_ERROR);
     return;
   }
+  
+  
+  // Get cvterm_id for 'analysis_interpro_xmloutput_hits' which is required
+  // for inserting into the analysisfeatureprop table
+  $sql = "
+    SELECT
+      CVT.cvterm_id
+    FROM {cvterm} CVT
+      INNER JOIN {cv} ON cv.cv_id = CVT.cv_id
+    WHERE
+      CVT.name = 'analysis_interpro_xmloutput_hit' AND
+      CV.name = 'tripal'
+  ";
+  $type_id = chado_query($sql)->fetchField();
 
   // Count the number of entires to be processed
   $no_iterations = 0;
