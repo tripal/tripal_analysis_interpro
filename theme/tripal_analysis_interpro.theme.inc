@@ -58,7 +58,7 @@ function tripal_get_interpro_XML_results($feature_id) {
 
       // parse the XML and add it to the array of results to be returned
       $interpro_xml = $afeatureprop->value;
-      $orf = tripal_analysis_interpro_get_result_object($interpro_xml, $feature_id);
+      $orf = tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id);
       $results[$analysis->analysis_id]['protein_ORFs'][] = $orf;
       $results[$analysis->analysis_id]['analysis'] = $analysis;
 
