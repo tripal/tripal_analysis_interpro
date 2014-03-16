@@ -570,13 +570,53 @@ function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisf
  *   The feature ID to which this blast XML belongs.
  *
  * @return
- *   An array whose structure varies depending if XML is v5 or v4. See the
- *   return value from these functions for specific structure: 
- *     tripal_analysis_interpro_parse_feature_XML5_protein()
- *     tripal_analysis_interpro_parse_feature_XML5_nucleotide()
- *     tripal_analysis_interpro_parse_feature_XML4()
- *   
+ *   An array with the following fields:
  *
+ *     An arrray containing all of the IPR terms mapped to this feature. Each
+ *     IPR term is an array with 3 elements. The first element is the IPR
+ *     accession, the second is the name and the third is the description
+ *       $terms['iprterms']
+ *
+ *     A string indicating the XML format that was parsed. Valid values
+ *     are XML4 or XML5
+ *       $terms['format']
+ *
+ *     An array of terms, where GO:XXXXXXXX idicates a GO accession that
+ *     is used as a key for the array.  All GO terms for all matches are stored here.
+ *       $terms['goterms']['GO:XXXXXXX']['category']
+ *       $terms['goterms']['GO:XXXXXXX']['name']
+ *
+ *     An array of terms. The variable IPRXXXXXX indicates an IPR accession
+ *     that is used as a key for the array.
+ *       $terms['iprterms']
+ *       $terms['iprterms']['IPRXXXXXX']['ipr_name']
+ *       $terms['iprterms']['IPRXXXXXX']['ipr_desc']
+ *       $terms['iprterms']['IPRXXXXXX']['ipr_type']
+ *
+ *     Each term may have one or more matches.  The variable $j indicates
+ *     an index variable for iterating through the matches.
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['match_id']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['match_name']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['match_desc']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['match_dbname']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['evalue']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['score']
+ *
+ *     An array of terms, where GO:XXXXXXXX idicates a GO accession that
+ *     is used as a key for the array.  GO terms are stored a second time
+ *     here to associate them with the proper IPR.
+ *       $terms['iprterms']['IPRXXXXXX']['goterms']['GO:XXXXXXX']['category']
+ *       $terms['iprterms']['IPRXXXXXX']['goterms']['GO:XXXXXXX']['name']
+ *
+ *     Each match can have multiple start and stop locations. The variable $k
+ *     indicates an index variable for iterating through the locations
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_start']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_end']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_score']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_status']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_evalue']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_level']
+ *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_evidence']
  */
 function tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id) {
 
@@ -600,251 +640,222 @@ function tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id) 
 }
 /**
  * Parses the Interpro XML for a single feature and returns an array
- * containing the results.
+ * containing the results.  This function should be used when IPR XMLv5 is
+ * being parsed for a protein input sequence or for the protein subsection
+ * of XML from a nucleotide input sequence.
  *
- * @param $interpro_xml
- *   The XML results for a single feature.
+ * @param $xml_obj
+ *   The SimpleXMLElement object for a single feature.
  * @param $feature_id
  *   The feature ID to which this blast XML belongs.
  *
  * @return
- *   An array in the following structure
- *   
- *      The format of this array
- *        $protein['format'] = 'XML5';
- *
- *      Details about interpro match for the feature
- *        $protein['orf']
- *        $protein['orf']['start']
- *        $protein['orf']['end']
- *        $protein['orf']['strand']
- *
- *      An arrray containing all of the IPR terms mapped to this feature. Each
- *      IPR term is an array with 3 elements. The first element is the IPR
- *      accession, the second is the name and the third is the description
- *        $protein['iprterms']
- *
- *      An array containing all of the GO terms mapped to the feature. Each GO
- *      term is simply a string of the format GO:XXXXXX
- *        $protein['goterms']
- *
- *      An array of terms. The variable $i indicates an index variable for
- *      iterating through the terms
- *        $protein['matches']
- *        $protein['matches'][$i]['ipr_id']
- *        $protein['matches'][$i]['ipr_name']
- *        $protein['matches'][$i]['ipr_type']
- *        $protein['matches'][$i]['match_id']
- *        $protein['matches'][$i]['match_name']
- *        $protein['matches'][$i]['match_dbname']
- *        $protein['matches'][$i]['match_version']
- *        $protein['matches'][$i]['go_terms'][]
- *
- *      Each match can have multiple start and stop locations. The variable $k
- *      indicates an index variable for iterating through the locations
- *        $protein['matches'][$i]['locations'][$k]['match_start']
- *        $protein['matches'][$i]['locations'][$k]['match_end']
- *        $protein['matches'][$i]['locations'][$k]['match_score']
- *        $protein['matches'][$i]['locations'][$k]['match_evalue']
- *        $protein['matches'][$i]['locations'][$k]['match_level']
- *
+ *  An array as specified by the tripal_analysis_interpro_parse_feature_XML()
+ *  function
  */
 function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_id) {
 
-  $protein = array();
+  $terms  = array();
+  $terms['format'] = 'XML5';
+  $terms['iprterms'] = array();
+  $terms['goterms'] = array();
 
   // iterate through each element of the 'protein' children
   foreach ($xml_obj->children() as $element) {
     
     if($element->getname() == 'matches') {
       // iterate through the match elements
-      $i = 0;
       foreach ($element->children() as $match_element) {
+        // initalize the $match array where we store details about this match
+        $match = array();
         
-        $attrs = $match_element->attributes();
-        $protein['matches'][$i]['evalue']    = (string) $attrs['evalue'];
-        $protein['matches'][$i]['score']     = (string) $attrs['score'];
-
+        // sometimes an alignment is made but there is no corresponding IPR term
+        // so we default the match IPR term to 'noIPR'
+        $match_ipr_id = 'noIPR';
+        $match_ipr_type = '';
+        $match_ipr_desc = '';
+        $match_ipr_name = '';
+        
+        // iterate through the children of this match to collect the details
         foreach ($match_element->children() as $match_details) {
-
+          
+          // the <signature> tag contains information about the match in the 
+          // member database (e.g. GENE3D, PFAM, etc). 
           if ($match_details->getname() == 'signature') {
-            $attrs = $match_details->attributes();
-            $protein['matches'][$i]['match_name'] = (string) $attrs['name']; // the name of the match
-            $protein['matches'][$i]['match_desc'] = (string) $attrs['desc']; // the match description
-            $protein['matches'][$i]['match_id']   = (string) $attrs['ac'];   // the library accession number
             
+            // get the details about this match
+            $attrs = $match_details->attributes();
+            $match['match_name'] = (string) $attrs['name']; // the name of the match
+            $match['match_desc'] = (string) $attrs['desc']; // the match description
+            $match['match_id']   = (string) $attrs['ac'];   // the library accession number
+            
+            // find the IPR term and GO Terms associated with this match
             foreach ($match_details->children() as $sig_element) {
+              
+              // the <entry> tag contains the IPR term entry that corresponds to this match
               if ($sig_element->getname() == 'entry') {
                 $attrs = $sig_element->attributes();
-                $protein['matches'][$i]['ipr_type'] = (string) $attrs['type']; // e.g. DOMAIN, SITE
-                $protein['matches'][$i]['ipr_name'] = (string) $attrs['name']; // the match name
-                $protein['matches'][$i]['ipr_desc'] = (string) $attrs['desc']; // the match description
-                $protein['matches'][$i]['ipr_id']   = (string) $attrs['ac'];   // the IPR accession number
-                $protein['iprterms'][] = array((string) $attrs['ac'], (string) $attrs['name'], (string) $attrs['desc']);
+                $match_ipr_id   = (string) $attrs['ac'];
+                $match_ipr_type = (string) $attrs['type']; // e.g. DOMAIN, SITE
+                $match_ipr_name = (string) $attrs['name']; // the match name
+                $match_ipr_desc = (string) $attrs['desc']; // the match description
+                
+                // initialize the term sub array and matches if they haven't already been added.
+                if (!array_key_exists($match_ipr_id, $terms['iprterms'])) {
+                  $terms['iprterms'][$match_ipr_id] = array();
+                  $terms['iprterms'][$match_ipr_id]['matches'] = array();
+                  $terms['iprterms'][$match_ipr_id]['goterms'] = array();
+                }
                 
                 // get the GO terms which are children of the <entry> element
                 foreach ($sig_element->children() as $entry_element) {
                   if ($entry_element->getname() == 'go-xref') {
                     $attrs = $entry_element->attributes();
-                    $protein['matches'][$i]['go_terms'][] = (string) $attrs['id'];
-                    $protein['goterms'][] = (string) $attrs['id'];
+                    $go_id = (string) $attrs['id'];
+                    $goterm = array();
+                    $goterm['category'] = (string) $attrs['category'];
+                    $goterm['name']     = (string) $attrs['name'];
+                    
+                    // GO terms are stored twice. Once with the IPR term to which they were found
+                    // and second as first-level element of the $terms array where all terms are present
+                    $terms['iprterms'][$match_ipr_id]['goterms'][$go_id] = $goterm;
+                    $terms['goterms'][$go_id] = $goterm;
                   }
                 }
               }
-              if ($sig_element->getname() == 'models') {
-                // ignore the model we don't need it
-              }
+
+              // add in the match library and version information
               if ($sig_element->getname() == 'signature-library-release') {
                 $attrs = $sig_element->attributes();
-                $protein['matches'][$i]['match_dbname']  = (string) $attrs['library'];
-                $protein['matches'][$i]['match_version'] = (string) $attrs['version'];
+                $match['match_dbname']  = (string) $attrs['library'];
+                $match['match_version'] = (string) $attrs['version'];
               }
             }
           } // end if($match_element->getname() == 'signature') {
+          
+          // the <locations> tag lists the alignment locations for this match
           if($match_details->getname() == 'locations') {
             $k = 0;
             foreach ($match_details->children() as $loc_element) {
               $attrs = $loc_element->attributes();
-              $protein['matches'][$i]['locations'][$k]['match_start']  = (string) $attrs['start'];
-              $protein['matches'][$i]['locations'][$k]['match_end']    = (string) $attrs['end'];
-              $protein['matches'][$i]['locations'][$k]['match_score']  = (string) $attrs['score'];
-              $protein['matches'][$i]['locations'][$k]['match_evalue'] = (string) $attrs['evalue'];
-              $protein['matches'][$i]['locations'][$k]['match_level']  = (string) $attrs['level'];
+              $match['locations'][$k]['match_start']  = (string) $attrs['start'];
+              $match['locations'][$k]['match_end']    = (string) $attrs['end'];
+              $match['locations'][$k]['match_score']  = (string) $attrs['score'];
+              $match['locations'][$k]['match_evalue'] = (string) $attrs['evalue'];
+              $match['locations'][$k]['match_level']  = (string) $attrs['level'];
               $k++;
             }
-          }
+          } // end if($match_details->getname() == 'locations') {
         } // end foreach ($match_element->children() as $match_details) {
+        
+        $attrs = $match_element->attributes();
+        $match['evalue'] = (string) $attrs['evalue'];
+        $match['score']  = (string) $attrs['score'];
+        
+        // add this match to the IPR term key to which it is associated
+        $terms['iprterms'][$match_ipr_id]['matches'][] = $match;
+        $terms['iprterms'][$match_ipr_id]['ipr_type'] = $match_ipr_type;
+        $terms['iprterms'][$match_ipr_id]['ipr_name'] = $match_ipr_name;
+        $terms['iprterms'][$match_ipr_id]['ipr_desc'] = $match_ipr_desc;
+        
+        // make sure we have a goterms array in the event that none were found
+        if (!array_key_exists('goterms', $terms['iprterms'][$match_ipr_id])) {
+          $terms['iprterms'][$match_ipr_id]['goterms'] = array();
+        }
+
       } // end foreach ($element->children() as $match_element) {
-      $i++;
     } // end if($element->getname() == 'matches') {
   } // end foreach ($xml_obj->children() as $element) {
   
-  // proteins don't have orfs but nucleotide-sequences do. We just initialize it here
-  // as this array is returned by both XML5 functions and it needs to be the same
-  $protein['format']        = 'XML5';
-  $protein['orf']['name']   = '';
-  $protein['orf']['start']  = '';
-  $protein['orf']['end']    = '';
-  $protein['orf']['strand'] = '';
-  $protein['orf']['num_matches'] = $i;
-  return $protein;
+  //if (count($terms['iprterms']) > 0) {
+  //  dpm($terms);
+  //}
+  return $terms;
 }
 /**
  * Parses the Interpro XML for a single feature and returns an array
- * containing the results.
+ * containing the results.  This function should be used when IPR XMLv5 is
+ * being parsed for a nucleotide input sequence
  *
- * @param $interpro_xml
- *   The XML results for a single feature.
+ * @param $xml_obj
+ *   The SimpleXMLElement object for a single feature.
  * @param $feature_id
  *   The feature ID to which this blast XML belongs.
- *   
+ *
  * @return
- *   An array of proteins.  Each protein is an array with the same format 
- *   as returned by the tripal_analysis_interpro_parse_feature_XML5_protein() function
+ *  An array as specified by the tripal_analysis_interpro_parse_feature_XML()
+ *  function
  */
 function tripal_analysis_interpro_parse_feature_XML5_nucelotide($xml_obj, $feature_id) {
-
-  $proteins = array();
-  $iprterms = array();
-  $goterms  = array();
+  
+  $results  = array();
+  $results['format'] = 'XML5';
+  $results['iprterms'] = array();
+  $results['goterms'] = array();
   
   // iterate through each element of the 'nucleotide-sequence' children
   foreach ($xml_obj->children() as $element) {
     if($element->getname() == 'orf') {
-      
       foreach ($element->children() as $sub_element) {
+        
+        // the <protein> tag is an ORF in the nucleotide sequence
         if ($sub_element->getname() == 'protein') {
-          $orf = tripal_analysis_interpro_parse_feature_XML5_protein($sub_element, $feature_id);
-        }
-        // add in the ORF information to the protein
-        $attr = $element->attributes();
-        $orf['orf']['end']    = (string) $attr["end"];
-        $orf['orf']['start']  = (string) $attr["start"];
-        $orf['orf']['strand'] = (string) $attr["strand"];
-        
-        // concatenate all the iprterms for all orfs
-        if (array_key_exists('iprterms', $orf)) {
-          foreach ($orf['iprterms'] as $iprterm) {
-            $iprterms[] = $iprterm;
-          }
-        }
-        
-        // concatenenate all the go terms for all orfs
-        if (array_key_exists('iprterms', $orf)) {
-          foreach ($orf['goterms'] as $goterm) {
-            $goterms[] = $goterm;
+          $terms = tripal_analysis_interpro_parse_feature_XML5_protein($sub_element, $feature_id);
+
+          // becase there are multiple ORFs per sequence we want to combine the 
+          // results into a single set to be returned by this function
+          foreach ($terms['iprterms'] as $ipr_id => $iprterm) {
+            
+            // consolidate the IPR
+            $results['iprterms'][$ipr_id]['ipr_desc'] = $iprterm['ipr_desc'];
+            $results['iprterms'][$ipr_id]['ipr_name'] = $iprterm['ipr_name'];
+            $results['iprterms'][$ipr_id]['ipr_type'] = $iprterm['ipr_type'];
+            
+            // merge the matches
+            if (!array_key_exists('matches', $results['iprterms'][$ipr_id])) {
+              $results['iprterms'][$ipr_id]['matches'] = array();
+            }
+            $results['iprterms'][$ipr_id]['matches'] = array_merge($results['iprterms'][$ipr_id]['matches'], $iprterm['matches']);
+            
+            // merge the goterms
+            if (!array_key_exists('goterms', $results['iprterms'][$ipr_id])) {
+              $results['iprterms'][$ipr_id]['goterms'] = array();
+            }
+            $results['iprterms'][$ipr_id]['goterms'] = array_merge($results['iprterms'][$ipr_id]['goterms'], $iprterm['goterms']);
+            
+            // merge the go terms
+            foreach ($iprterm['goterms'] as $go_id => $goterm) {
+              $results['goterms'][$go_id]['name'] = $goterm['name'];
+              $results['goterms'][$go_id]['category'] = $goterm['category'];
+            }
           }
         }
       }
     }
   }
-  return array(
-    'proteins' => $proteins,
-    'goterms'  => $goterms,
-    'iprterms' => $iprterms,
-  );
+  return $results;
 }
 
 /**
  * Parses the Interpro XML for a single feature and returns an array
  * containing the results.
  *
- * @param $interpro_xml
- *   The XML results for a single feature.
+ * @param $xml_obj
+ *   The SimpleXMLElement object for a single feature.
  * @param $feature_id
  *   The feature ID to which this blast XML belongs.
  *
  * @return
- *   An array with the following fields:
- *
- *      Details about interpro match for the feature
- *        $ipr_array['orf']
- *        $ipr_array['orf']['orf_id']
- *        $ipr_array['orf']['orf_length']
- *        $ipr_array['orf']['orf_crc64']
- *
- *      An arrray containing all of the IPR terms mapped to this feature. Each
- *      IPR term is an array with 3 elements. The first element is the IPR
- *      accession, the second is the name and the third is the description
- *        $ipr_array['iprterms']
- *
- *      An array containing all of the GO terms mapped to the feature
- *        $ipr_array['goterms']
- *
- *      An array of terms. The variable $i indicates an index variable for
- *      iterating through the terms
- *        $ipr_array['terms']
- *        $ipr_array['terms'][$i]['ipr_id']
- *        $ipr_array['terms'][$i]['ipr_name']
- *        $ipr_array['terms'][$i]['ipr_type']
- * 
- *       Each feature may have one or more matches.  The variable $j indicates
- *      an index variable for iterating through the matches.
- *        $ipr_array['terms'][$i]['matches'][$j]['match_id']
- *        $ipr_array['terms'][$i]['matches'][$j]['match_name']
- *        $ipr_array['terms'][$i]['matches'][$j]['match_dbname']
- *        $ipr_array['terms'][$i]['matches'][$j]['go_terms'][]
- *
- *      Each match can have multiple start and stop locations. The variable $k
- *      indicates an index variable for iterating through the locations
- *        $ipr_array['terms'][$i]['matches'][$j]['locations'][$k]['match_start']
- *        $ipr_array['terms'][$i]['matches'][$j]['locations'][$k]['match_end']
- *        $ipr_array['terms'][$i]['matches'][$j]['locations'][$k]['match_score']
- *        $ipr_array['terms'][$i]['matches'][$j]['locations'][$k]['match_status']
- *        $ipr_array['terms'][$i]['matches'][$j]['locations'][$k]['match_evidence']
- *
+ *  An array as specified by the tripal_analysis_interpro_parse_feature_XML()
+ *  function
  */
 function tripal_analysis_interpro_parse_feature_XML4($xml_obj, $feature_id) {
 
-  $results  = array();
-  $terms    = array();
-  $protein  = array();
-  $iprterms = array();
-  $goterms  = array();
+  $terms  = array();
+  $terms['format'] = 'XML4';
+  $terms['iprterms'] = array();
+  $terms['goterms'] = array();
 
-  $term_count = 0;
-  $match_count = 0;
-   
   // get the properties of this result
   $attr = $xml_obj->attributes();
   $protein['orf_id']     = (string) $attr["id"];
@@ -853,55 +864,70 @@ function tripal_analysis_interpro_parse_feature_XML4($xml_obj, $feature_id) {
 
   // iterate through each interpro results for this protein
   foreach ($xml_obj->children() as $intepro) {
+    
     // get the interpro term for this match
     $attr = $intepro->attributes();
-    $terms[$term_count]['ipr_id']   = (string) $attr["id"];
-    $terms[$term_count]['ipr_name'] = (string) $attr["name"];
-    $terms[$term_count]['ipr_type'] = (string) $attr["type"];
-    $iprterms[] = array($terms[$term_count]['ipr_id'], $terms[$term_count]['ipr_name'], $terms[$term_count]['ipr_name']);
+    $ipr_id = (string) $attr["id"];
+    
+    $terms['iprterms'][$ipr_id]['ipr_name'] = (string) $attr["name"];
+    $terms['iprterms'][$ipr_id]['ipr_desc'] = (string) $attr["name"];
+    $terms['iprterms'][$ipr_id]['ipr_type'] = (string) $attr["type"];
+    $terms['iprterms'][$ipr_id]['matches']  = array();
+    $terms['iprterms'][$ipr_id]['goterms']  = array();
 
     // iterate through the elements of the interpro result
-    $matches[$term_count]['matches'] = array();
     $match_count = 0;
     foreach ($intepro->children() as $level1) {
       $element_name = $level1->getName();
       if ($element_name == 'match') {
+        
+        $match = array();
+        
         // get the match name for this match
         $attr = $level1->attributes();
-        $terms[$term_count]['matches'][$match_count]['match_id']     = (string) $attr["id"];
-        $terms[$term_count]['matches'][$match_count]['match_name']   = (string) $attr["name"];
-        $terms[$term_count]['matches'][$match_count]['match_dbname'] = (string) $attr["dbname"];
+        $match['match_id']     = (string) $attr["id"];
+        $match['match_name']   = (string) $attr["name"];
+        $match['match_dbname'] = (string) $attr["dbname"];
 
         // get the location information for this match
-        $loc_count = 0;
+        $k = 0;
         foreach ($level1->children() as $level2) {
           $element_name = $level2->getName();
           if ($element_name == 'location') {
             $attr = $level2->attributes();
-            $terms[$term_count]['matches'][$match_count]['locations'][$loc_count]['match_start']    = (string) $attr["start"];
-            $terms[$term_count]['matches'][$match_count]['locations'][$loc_count]['match_end']      = (string) $attr["end"];
-            $terms[$term_count]['matches'][$match_count]['locations'][$loc_count]['match_score']    = (string) $attr["score"];
-            $terms[$term_count]['matches'][$match_count]['locations'][$loc_count]['match_status']   = (string) $attr["status"];
-            $terms[$term_count]['matches'][$match_count]['locations'][$loc_count]['match_evidence'] = (string) $attr["evidence"];
-            $loc_count++;
+            $match['locations'][$k]['match_start']    = (string) $attr["start"];
+            $match['locations'][$k]['match_end']      = (string) $attr["end"];
+            $match['locations'][$k]['match_score']    = (string) $attr["score"];
+            $match['locations'][$k]['match_status']   = (string) $attr["status"];
+            $match['locations'][$k]['match_evidence'] = (string) $attr["evidence"];
+            $k++;
           }
         }
-        $match_count++;
+        
+        // add this match to the IPR term key to which it is associated
+        $terms['iprterms'][$ipr_id]['matches'][] = $match;
       }
 
+      // get the GO terms for this match
       if ($element_name == 'classification') {
-        $attr = $level1->attributes();
-        if ($attr['class_type'] == 'GO') {
-          $terms[$term_count]['matches'][$match_count]['go_terms'][] = (string) $attr['id'];
-          $goterms[] = (string) $attr['id'];
+        $attrs = $level1->attributes();
+        if ($attrs['class_type'] == 'GO') {
+          $go_id = (string) $attrs['id'];
+          $goterm = array();
+          $goterm['category'] = (string) $level1->category;
+          $goterm['name']     = (string) $level1->description;
+
+          // GO terms are stored twice. Once with the IPR term to which they were found
+          // and second as first-level element of the $terms array where all terms are present
+          $terms['iprterms'][$ipr_id]['goterms'][$go_id] = $goterm;
+          $terms['goterms'][$go_id] = $goterm;
         }
       }
     }
-    $term_count++;
   }
-  $results['terms']    = $terms;
-  $results['orf']      = $protein;
-  $results['iprterms'] = $iprterms;
-  $results['goterms']  = $goterms;
-  return $results;
+  
+  //if (count($terms['iprterms']) > 0) {
+  //  dpm($terms);
+  //}
+  return $terms;
 }

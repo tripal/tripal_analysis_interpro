@@ -5,13 +5,15 @@
 function tripal_analysis_interpro_preprocess_tripal_feature_interpro_results(&$variables) {
   $feature = $variables['node']->feature;
 
-  $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
+  // make sure the necessary property elements exist
   if (!property_exists($feature, 'tripal_analysis_interpro')) {
     $feature->tripal_analysis_interpro = new stdClass;
   }
   if (!property_exists($feature->tripal_analysis_interpro, 'results')) {
     $feature->tripal_analysis_interpro->results = new stdClass;
   }
+  
+  $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
   $feature->tripal_analysis_interpro->results->xml = $xml_results;
   
   // we don't know how many analysis are the old style HTML version and how many are the newer
@@ -24,8 +26,8 @@ function tripal_analysis_interpro_preprocess_tripal_feature_interpro_results(&$v
  */
 function tripal_get_interpro_XML_results($feature_id) {
 
-  // Get the blast results stored as XML from the analysisfeatureprop table
-  // the type for the property is named 'analysis_blast_output_iteration_hits'
+  // Get the interproscan results stored as XML from the analysisfeatureprop table
+  // the type for the property is named 'analysis_interpro_xmloutput_hit'
   // and is found in the 'tripal' controlled vocabulary.  This CV term was
   // added by this module.
   $select = array(
@@ -55,22 +57,46 @@ function tripal_get_interpro_XML_results($feature_id) {
       $analysis = tripal_core_generate_chado_var('analysis',
           array('analysis_id' => $analysisfeature->analysis_id));
       $analysis_id = $analysis->analysis_id;
+      if (!array_key_exists($analysis_id, $results)) {
+        $results[$analysis_id] = array();
+      }
 
       // parse the XML and add it to the array of results to be returned
       $interpro_xml = $afeatureprop->value;
-      $orf = tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id);
-      $results[$analysis->analysis_id]['protein_ORFs'][] = $orf;
-      $results[$analysis->analysis_id]['analysis'] = $analysis;
+      $terms = tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id);
 
-      // iterate through all of the protein ORFs and combine the terms into one large list
-      if (!array_key_exists('allterms', $results[$analysis->analysis_id])) {
-        $results[$analysis->analysis_id]['allterms'] = array();
+      // the terms array will be an array of terms with their matches
+      // but because there may be multiple analysisfeatureprops for a single
+      // analysis (e.g. IPR XMLv4) then we need to combine everything into
+      // as single result array
+      foreach ($terms['iprterms'] as $ipr_id => $iprterm) {
+
+        // consolidate the IPR
+        $results[$analysis_id]['iprterms'][$ipr_id]['ipr_desc'] = $iprterm['ipr_desc'];
+        $results[$analysis_id]['iprterms'][$ipr_id]['ipr_name'] = $iprterm['ipr_name'];
+        $results[$analysis_id]['iprterms'][$ipr_id]['ipr_type'] = $iprterm['ipr_type'];
+        
+        
+        // merge the matches
+        if (!array_key_exists('matches',  $results[$analysis_id]['iprterms'][$ipr_id])) {
+          $results[$analysis_id]['iprterms'][$ipr_id]['matches'] = array();
+        }
+        $results[$analysis_id]['iprterms'][$ipr_id]['matches'] = array_merge($results[$analysis_id]['iprterms'][$ipr_id]['matches'], $iprterm['matches']);
+        
+        // merge the goterms
+        if (!array_key_exists('goterms',  $results[$analysis_id]['iprterms'][$ipr_id])) {
+          $results[$analysis_id]['iprterms'][$ipr_id]['goterms'] = array();
+        }
+        $results[$analysis_id]['iprterms'][$ipr_id]['goterms'] = array_merge($results[$analysis_id]['iprterms'][$ipr_id]['goterms'], $iprterm['goterms']);
+        
       }
-      if (!array_key_exists('go_terms', $results[$analysis->analysis_id])) {
-        $results[$analysis->analysis_id]['goterms'] = array();
+      // merge the go terms
+      foreach ($terms['goterms'] as $go_id => $goterm) {
+        $results[$analysis_id]['goterms'][$go_id]['name']     = $goterm['name'];
+        $results[$analysis_id]['goterms'][$go_id]['category'] = $goterm['category'];
       }
-      $results[$analysis->analysis_id]['allterms'] = array_merge($results[$analysis->analysis_id]['allterms'], $orf['iprterms']);
-      $results[$analysis->analysis_id]['goterms'] = array_merge($results[$analysis->analysis_id]['goterms'], $orf['goterms']);
+      $results[$analysis_id]['analysis'] = $analysis;
+      $results[$analysis_id]['format']   = $terms['format'];
     }
   }
   return $results;
