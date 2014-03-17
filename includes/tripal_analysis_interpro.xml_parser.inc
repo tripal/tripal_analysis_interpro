@@ -7,44 +7,57 @@
 function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
   $parsego, $query_re, $query_type, $query_uniquename, $job_id) {
   
-  // clear out the anslysisfeature table for this analysis before getting started
-  tripal_core_chado_delete('analysisfeature', array('analysis_id' => $analysis_id));
-
-  // If user input a file(e.g. interpro.xml)
-  if (is_file($interproxmlfile)) {
-    tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
-        $parsego, $query_re, $query_type, $query_uniquename, $job_id, 1);
-  }
-  else {
-    $dir_handle = @opendir($interproxmlfile) or die("Unable to open $interproxmlfile");
-    $pattern = sql_regcase($interproxmlfile . "/*.xml");
-    $total_files = count(glob($pattern));
-    print "$total_files file(s) to be parsed.\n";
-
-    $interval = intval($total_files * 0.01);
-    if ($interval == 0) {
-      $interval = 1;
+  
+  $transaction = db_transaction();
+  print "\nNOTE: Loading of this InterProScan XML file is performed using a database transaction. \n" .
+      "If the load fails or is terminated prematurely then the entire set of \n" .
+      "insertions/updates is rolled back and will not be found in the database\n\n";
+  try {
+  
+    // clear out the anslysisfeature table for this analysis before getting started
+    tripal_core_chado_delete('analysisfeature', array('analysis_id' => $analysis_id));
+  
+    // If user input a file(e.g. interpro.xml)
+    if (is_file($interproxmlfile)) {
+      tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
+          $parsego, $query_re, $query_type, $query_uniquename, $job_id, 1);
     }
-    $no_file = 0;
-
-    // Parsing all files in the directory
-    while ($file = readdir($dir_handle)) {
-      if (preg_match("/^.*\.xml/i", $file)) {
-        tripal_analysis_interpro_parseSingleXMLFile($analysis_id, "$interproxmlfile/$file",
-          $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $no_file, $total_files);        
+    else {
+      $dir_handle = @opendir($interproxmlfile) or die("Unable to open $interproxmlfile");
+      $pattern = sql_regcase($interproxmlfile . "/*.xml");
+      $total_files = count(glob($pattern));
+      print "$total_files file(s) to be parsed.\n";
+  
+      $interval = intval($total_files * 0.01);
+      if ($interval == 0) {
+        $interval = 1;
       }
-      $no_file ++;
+      $no_file = 0;
+  
+      // Parsing all files in the directory
+      while ($file = readdir($dir_handle)) {
+        if (preg_match("/^.*\.xml/i", $file)) {
+          tripal_analysis_interpro_parseSingleXMLFile($analysis_id, "$interproxmlfile/$file",
+            $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $no_file, $total_files);        
+        }
+        $no_file ++;
+      }
     }
   }
-
-  print "\nDone\n";     
+  catch (Exception $e) {
+    print "\n"; // make sure we start errors on new line
+    watchdog_exception('tr_ipr_parse', $e);
+    $transaction->rollback();
+    print "FAILED: Rolling back database changes...\n";
+  }
+  print "\nDone\n";
 }
 /**
  *
  */
 function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
   $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status = 1, 
-  $file_no = 1, $total_files = 1) {
+  $file_no = 0, $total_files = 1) {
       
   $filename = preg_replace('/^.*\/(.*)$/' , '$1', $interproxmlfile);
 
@@ -119,7 +132,7 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
     // Set job status
     $idx_iterations ++;
     if ($idx_iterations % $interval == 0) {
-      $percentage = sprintf("%.4f", ($idx_iterations / $no_iterations) * ($file_no/$total_files) * 100 + (($file_no)/$total_files)*100);
+      $percentage = sprintf("%.4f",  (($file_no + ($idx_iterations / $no_iterations)) / $total_files) * 100);
       tripal_job_set_progress($job_id, $percentage);
       print "Parsing file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
@@ -128,55 +141,47 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
     $children = $entity->children();
     foreach ($children as $child) {
       $childname = $child->getname();
+      
+      // the <xref> tag holds the sequence name and description.  There could
+      // be multiple sequences that have the same protein and hence the same
+      // matches. So, for each one in the file, we want to re-parse the matches
       if ($childname == 'xref') {
         $attrs   = $child->attributes();
         $seqid   = (string) $attrs['id'];
         $seqname = (string) $attrs['name'];
-        break;
-      }
-    }
 
-    // is the sequence id is 'submitted' then the
-    // results do not contain the original sequence names.  The only
-    // option we have is to use the filename.  This will work in the case of
-    // Blast2GO which stores the XML for each sequence in a file with the
-    // the filename the name of the sequence
-    if (id == "Submitted") {
-      $filename = preg_replace('/^.*\/(.*).xml$/', '$1', $interproxmlfile);
-      watchdog('tr_ipr_parse', "Sequence name for results is not specific, using filename: %filename as the sequence name\n", array('%filename' => $filename), WATCHDOG_NOTICE);
-      $seqid = $filename;
-    }
-  
-    // match the name of the feature in the XML file to a feature in Chado
-    $feature_id = tripal_analysis_interpro_match_feature($seqid, $query_re, $query_uniquename);
-    if (!$feature_id) {
-      continue;
-    }
-    
-    // create an entry in the analysisfeature table and add the XML for this feature
-    // to the analysisfeatureprop table
-    $analysisfeature_id = tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id, $entity);
-    if (!$analysisfeature_id) {
-      continue;
-    }
+        // match the name of the feature in the XML file to a feature in Chado
+        $feature_id = tripal_analysis_interpro_match_feature($seqid, $query_re, $query_uniquename);
+        if (!$feature_id) {
+          continue;
+        }
+        
+        // create an entry in the analysisfeature table and add the XML for this feature
+        // to the analysisfeatureprop table
+        $analysisfeature_id = tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id, $entity);
+        if (!$analysisfeature_id) {
+          continue;
+        }
 
-    // parse the XML
-    $ipr_array = tripal_analysis_interpro_parse_feature_XML($entity->asXML(), $feature_id);
+        // parse the XML
+        $ipr_array = tripal_analysis_interpro_parse_feature_XML($entity->asXML(), $feature_id);
     
-    // add in the IPR terms
-    $iprterms = $ipr_array['iprterms'];
-    tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id);
-    
-    // get the DB id for the GO database
-    $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
-    $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name = 'GO'")->fetchField();
-    if ($parsego and !$go_db_id) {
-      watchdog('tr_ipr_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
-    }
-    if ($parsego and $go_db_id) {
-      $goterms = $ipr_array['goterms'];
-      tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisfeature_id, $go_db_id);
-    }
+        // add in the IPR terms
+        $iprterms = $ipr_array['iprterms'];
+        tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id);
+      
+        // get the DB id for the GO database
+        $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
+        $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name = 'GO'")->fetchField();
+        if ($parsego and !$go_db_id) {
+          watchdog('tr_ipr_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
+        }
+        if ($parsego and $go_db_id) {
+          $goterms = $ipr_array['goterms'];
+          tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisfeature_id, $go_db_id);
+        }
+      } // end if ($childname == 'xref') {
+    } // end foreach ($children as $child) {
   } // end foreach ($xml as $entity)
 }
 
@@ -278,7 +283,7 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
     // Set job status
     $idx_iterations ++;    
     if ($idx_iterations % $interval == 0) {
-      $percentage = sprintf("%.4f", ($idx_iterations / $no_iterations) * ($file_no / $total_files) * 100 + (($file_no) /$total_files) * 100);
+      $percentage = sprintf("%.4f",  (($file_no + ($idx_iterations / $no_iterations)) / $total_files) * 100);
       tripal_job_set_progress($job_id, $percentage);
       print "Parsing file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
@@ -418,9 +423,10 @@ function tripal_analysis_interpro_match_feature($seqid, $query_re, $query_unique
  * the 'INTERPRO' vacabulary then they are automatically added
  * 
  * @param $ipterms
- *   An array of terms with each term being an array if three elements where
- *   element 0 is the IPR accession, element 1 is the name of the term and
- *   element 3 is the description 
+ *   An array of terms where each array of the following format:
+ *     $iprterms['IPRXXXXXX']['ipr_name']
+ *     $iprterms['IPRXXXXXX']['ipr_desc']
+ *     $iprterms['IPRXXXXXX']['ipr_type']
  * @param $feature_id
  *   The feature to which the terms should be assocaited
  * @param $analysisfeature_id
@@ -430,15 +436,15 @@ function tripal_analysis_interpro_match_feature($seqid, $query_re, $query_unique
 function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id) {
   
   // iterate through each othe IPR terms
-  foreach ($iprterms as $iprterm) {
+  foreach ($iprterms as $ipr_id => $iprterm) {
     
-    if (strcmp($iprterm[0], 'noIPR')!=0) {
+    if (strcmp($iprterm[0], 'noIPR') != 0) {
       
       // add all terms but the 'noIPR' term
       $term = array(
-        'id' => "INTERPRO:$iprterm[0]",
-        'name' => $iprterm[1],
-        'def'  => $iprterm[2],
+        'id' => "INTERPRO:$ipr_id",
+        'name' => $iprterm['ipr_name'],
+        'def'  => $iprterm['ipr_desc'],
         'namespace' => 'INTERPRO',
         'is_obsolete' => 1,
       );
@@ -449,7 +455,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
       $ipr_cvterm = tripal_cv_add_cvterm($term, NULL, 0, 0);
       if (!$ipr_cvterm) {
         watchdog('tr_ipr_parse', "Failed: Cannot find cvterm: %name '%value'",
-          array('%name' => $iprterm[0], '%value' =>  $iprterm[1]), WATCHDOG_ERROR);
+          array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
         continue;
       }
        
@@ -466,7 +472,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
         $success = tripal_core_chado_insert('feature_cvterm', $values);
         if (!$success) {
           watchdog('tr_ipr_parse', "Failed: Cannot add cvterm: %name '%value'",
-          array('%name' => $iprterm[0], '%value' =>  $iprterm[1]), WATCHDOG_ERROR);
+            array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
           continue;
         }
       }
@@ -477,7 +483,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
         'analysisfeature_id' => $analysisfeature_id,
         'type_id' => $ipr_cvterm->cvterm_id,
         'rank' => 0,
-        'value' => $iprterm[0]
+        'value' => $ipr_id
       );
       $options = array('statement_name' => 'sel_analysisfeatureprop_antyrava');
       $results = tripal_core_chado_select('analysisfeatureprop', array('analysisfeatureprop_id'), $values, $options);
@@ -486,7 +492,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
         $success = tripal_core_chado_insert('analysisfeatureprop', $values, $options);
         if (!$success) {
           watchdog('tr_ipr_parse', "Failed:  Cannot add cvterm as an analysis feature property for the interpro term: %name '%value'",
-            array('%name' => $iprterm[0], '%value' =>  $iprterm[1]), WATCHDOG_ERROR);
+            array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
           continue;
         }
       }
@@ -498,7 +504,9 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
  * table for the feature.
  *  
  * @param $goterms
- *   An array containin each GO terms in teh form GO:XXXXXX
+ *   An array containin each GO terms in the following format:
+ *     $goterms['GO:XXXXXXX']['category']
+ *     $goterms['GO:XXXXXXX']['name']
  * @param $feature_id
  *   The feature to which the terms should be assocaited
  * @param $analysisfeature_id
@@ -509,10 +517,10 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
 function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisfeature_id, $go_db_id) {
   
   // cycle through the GO terms and add them to the database
-  foreach ($goterms as $goterm) {
+  foreach ($goterms as $go_id => $goterm) {
      
     // seperate the 'GO:' from the term
-    if (preg_match("/^.*?GO:(\d+).*$/", $goterm, $matches)) {
+    if (preg_match("/^.*?GO:(\d+).*$/", $go_id, $matches)) {
   
       // Find cvterm_id for the matched GO term
       $sql = "
@@ -825,7 +833,7 @@ function tripal_analysis_interpro_parse_feature_XML5_nucelotide($xml_obj, $featu
             
             // merge the go terms
             foreach ($iprterm['goterms'] as $go_id => $goterm) {
-              $results['goterms'][$go_id]['name'] = $goterm['name'];
+              $results['goterms'][$go_id]['name']     = $goterm['name'];
               $results['goterms'][$go_id]['category'] = $goterm['category'];
             }
           }
