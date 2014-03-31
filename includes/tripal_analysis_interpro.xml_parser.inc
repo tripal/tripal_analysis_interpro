@@ -438,8 +438,9 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
   // iterate through each othe IPR terms
   foreach ($iprterms as $ipr_id => $iprterm) {
     
-    if (strcmp($iprterm[0], 'noIPR') != 0) {
-      
+    
+    if ($iprterm['ipr_name'] and $iprterm['ipr_name'] != 'noIPR') {
+            
       // add all terms but the 'noIPR' term
       $term = array(
         'id' => "INTERPRO:$ipr_id",

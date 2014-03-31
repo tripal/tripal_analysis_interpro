@@ -98,21 +98,17 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
         
         $rows = array();
         foreach ($iprterms as $ipr_id => $iprterm) {
-          // skip entries with no integrated IPR
-          if(strcmp($ipr_id,'noIPR')==0){
-            continue;
-          }
           
           $matches  = $iprterm['matches'];
           $ipr_name = $iprterm['ipr_name'];
           $ipr_desc = $iprterm['ipr_desc'];
           $ipr_type = $iprterm['ipr_type'];
-          
+
           // iterate through the evidence matches
           foreach ($matches as $match) {
             $match_id     = $match['match_id'];
             $match_name   = $match['match_name'];
-            $match_dbname = $match['match_dbname'];
+            $match_dbname = $match['match_dbname'];           
           
             $locations = $match['locations'];
             $loc_details = '';            
@@ -131,11 +127,53 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
                 if($location['match_score']) {
                   $loc_details .= '<br>score: ' . $location['match_score'];
                 }
+                $loc_details .= '<br>';
               }
-              #$match_evidence =  $location['match_evidence'];
+              //$match_evidence =  $location['match_evidence'];
             }
+            // remove the trailing <br>
+            $loc_details = substr($loc_details, 0, -4); 
+            
+            if ($ipr_id == 'noIPR') {
+              $ipr_id_link = 'None';
+              $ipr_desc = 'No IPR available';
+            }
+            else {
+              // we want to use the URL for the database
+              $ipr_db = tripal_db_get_db(array('name' => 'INTERPRO'));
+              $ipr_id_link = $ipr_id;
+              if ($ipr_db and $ipr_db->urlprefix) {
+                $ipr_id_link = l($ipr_id, $ipr_db->urlprefix . $ipr_id, array('attributes' => array('target' => '_blank')));
+              }
+            }
+            
+            // the Prosite databases are split into two libraries for InterProScan. But
+            // we can just use the PROSITE database for both of them, so rename it here.
+            $match_dbname = preg_replace('/(PROSITE)_.*/', '\1', $match_dbname);
+            
+            // get links for the matching databases
+            $match_db = tripal_db_get_db(array('name' => strtoupper($match_dbname)));
+            if ($match_db and $match_db->url) {
+              // some databases need a prefix removed
+              if ($match_dbname == "GENE3D") {
+                $fixed_id = preg_replace('/G3DSA:/','', $match_id);
+                $match_id = l($fixed_id, $match_db->urlprefix . $fixed_id, array('attributes' => array('target' => '_blank')));
+              }
+              elseif ($match_dbname == "SUPERFAMILY") {
+                $fixed_id = preg_replace('/SSF/','', $match_id);
+                $match_id = l($fixed_id, $match_db->urlprefix . $fixed_id, array('attributes' => array('target' => '_blank')));
+              }
+              // for all others, just link using the URL prefix
+              else {
+                $match_id = l($match_id, $match_db->urlprefix . $match_id, array('attributes' => array('target' => '_blank')));
+              }
+            }
+            if ($match_db and $match_db->url) {
+              $match_dbname = l($match_dbname, $match_db->url, array('attributes' => array('target' => '_blank')));
+            }
+            
             $rows[] = array(
-              l($ipr_id, "http://www.ebi.ac.uk/interpro/entry/$ipr_id", array('attributes' => array('target' => '_blank'))),
+              $ipr_id_link,
               $ipr_desc,
               $match_dbname,
               $match_id,
