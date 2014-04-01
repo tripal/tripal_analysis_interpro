@@ -190,7 +190,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
           $rows[] = array(
             array(
               'data' => 'No results',
-              'colspan' => '4',
+              'colspan' => '6',
             ),
           );
         }
