@@ -68,24 +68,24 @@ function tripal_analysis_interpro_theme($existing, $type, $theme, $path) {
       'template' => 'node--chado-generic',
       'render element' => 'node',
       'base hook' => 'node',
-      'path' => "$core_path/theme"
+      'path' => "$core_path/theme/templates"
     ),
     'tripal_analysis_interpro_base' => array(
       'variables' => array('node' => NULL),
       'template' => 'tripal_analysis_interpro_base',
-      'path' => "$path/theme/tripal_analysis_interpro",
+      'path' => "$path/theme/templates",
     ),
     'tripal_analysis_interpro_teaser' => array(
       'variables' => array('node' => NULL),
       'template' => 'tripal_analysis_interpro_teaser',
-      'path' => "$path/theme/tripal_analysis_interpro",
+      'path' => "$path/theme/templates",
     ),
     
       // feature templates
     'tripal_feature_interpro_results' => array(
       'variables' => array('node' => NULL),
       'template' => 'tripal_feature_interpro_results',
-      'path' => "$path/theme/tripal_feature",
+      'path' => "$path/theme/templates",
     ),
   );
   

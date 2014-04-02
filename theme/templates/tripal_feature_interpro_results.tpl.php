@@ -2,7 +2,7 @@
 $feature = $variables['node']->feature;
 
 /* The results from an InterProScan analysis for this feature are avaialble to
- * this template in a array of the following foramt:
+ * this template in a array of the following format:
  *
  *     $results[$analysis_id]['iprterms']
  *     $results[$analysis_id]['goterms']

@@ -68,7 +68,7 @@ function tripal_analysis_interpro_add_dbs() {
   );
   tripal_db_add_db(
     'PROSITE_PATTERNS',
-    'Some biologically significant amino acid patterns can be summarised in the form of regular expressions.',
+    'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
     'http://prosite.expasy.org/',
     'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
   );
