@@ -423,29 +423,28 @@ function tripal_analysis_interpro_theme() {
     ),
   );
 }
-/*******************************************************************************
- * Prepare interpro result for the feature shown on the page
+/**
+ * Adds the InterProScan results for a given feature
+ * @param $variables
  */
-//function theme_tripal_analysis_interpro_results ($node) {
-//  $feature = $node->feature;
-//  $content = tripal_get_interpro_results($feature->feature_id);
-//  return $content;
-//}
-
 function tripal_analysis_interpro_preprocess_tripal_feature_interpro_results(&$variables) {
-   $feature = $variables['node']->feature;
+ $feature = $variables['node']->feature;
 
-   // we don't know how many analysis are the old style HTML version and how many are the newer
-   // XML format.  So, to be backwards compatible we should get both.
-   // $feature->tripal_analysis_interpro->results->html = tripal_get_interpro_HTML_results($feature->feature_id);
-  $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
-  if (!is_object($feature->tripal_analysis_interpro)) {
+  // make sure the necessary property elements exist
+  if (!property_exists($feature, 'tripal_analysis_interpro')) {
     $feature->tripal_analysis_interpro = new stdClass;
   }
-  if (!is_object($feature->tripal_analysis_interpro->results)) {
+  if (!property_exists($feature->tripal_analysis_interpro, 'results')) {
     $feature->tripal_analysis_interpro->results = new stdClass;
   }
-  $feature->tripal_analysis_interpro->results->xml = $xml_results; 
+  
+  $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
+  $feature->tripal_analysis_interpro->results->xml = $xml_results;
+  
+  // we don't know how many analysis are the old style HTML version and how many are the newer
+  // XML format.  So, to be backwards compatible we should get both.
+  $feature->tripal_analysis_interpro->results->html = tripal_get_interpro_HTML_results($feature->feature_id);
+  
 }
 
 /*******************************************************************************
@@ -461,57 +460,80 @@ function theme_parse_EBI_Interpro_XML_index_version($node) {
  */
 function tripal_get_interpro_XML_results($feature_id) {
 
-  // Get the blast results stored as XML from the analysisfeatureprop table
-  // the type for the property is named 'analysis_blast_output_iteration_hits'
+  // Get the interproscan results stored as XML from the analysisfeatureprop table
+  // the type for the property is named 'analysis_interpro_xmloutput_hit'
   // and is found in the 'tripal' controlled vocabulary.  This CV term was
   // added by this module.
   $select = array(
     'analysisfeature_id' => array(
-       'feature_id' => $feature_id,
+      'feature_id' => $feature_id,
     ),
     'type_id' => array(
       'name' => 'analysis_interpro_xmloutput_hit',
       'cv_id' => array(
-        'name' => 'tripal'          
+        'name' => 'tripal'
       ),
     ),
   );
   $afeatureprops = tripal_core_chado_select('analysisfeatureprop', array('*'), $select);
 
-   // iterate through all of the interpro XML properties for this feature
+  // iterate through all of the interpro XML properties for this feature
   $results = array();
-   if ($afeatureprops) {
-     foreach ($afeatureprops as $index => $afeatureprop) {
+  if ($afeatureprops) {
+    foreach ($afeatureprops as $index => $afeatureprop) {
 
-         // get the analysis feature record
-         $analysisfeature_arr = tripal_core_chado_select('analysisfeature', array('analysis_id'),
-            array('analysisfeature_id' => $afeatureprop->analysisfeature_id));
-         $analysisfeature = $analysisfeature_arr[0];
+      // get the analysis feature record
+      $analysisfeature_arr = tripal_core_chado_select('analysisfeature', array('analysis_id'),
+          array('analysisfeature_id' => $afeatureprop->analysisfeature_id));
+      $analysisfeature = $analysisfeature_arr[0];
 
-         // get the analysis record and the analysis_id
-         $analysis = tripal_core_generate_chado_var('analysis',
-            array('analysis_id' => $analysisfeature->analysis_id));
-         $analysis_id = $analysis->analysis_id;
+      // get the analysis record and the analysis_id
+      $analysis = tripal_core_generate_chado_var('analysis',
+          array('analysis_id' => $analysisfeature->analysis_id));
+      $analysis_id = $analysis->analysis_id;
+      if (!array_key_exists($analysis_id, $results)) {
+        $results[$analysis_id] = array();
+      }
 
-         // parse the XML and add it to the array of results to be returned
-         $interpro_xml = $afeatureprop->value;
-         $orf = tripal_analysis_interpro_get_result_object($interpro_xml, $feature_id);
-         $results[$analysis->analysis_id]['protein_ORFs'][] = $orf;
-         $results[$analysis->analysis_id]['analysis'] = $analysis;
+      // parse the XML and add it to the array of results to be returned
+      $interpro_xml = $afeatureprop->value;
+      $terms = tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id);
 
-         // iterate through all of the protein ORFs and combine the terms into one large list
-         if (!is_array($results[$analysis->analysis_id]['allterms'])) {
-           $results[$analysis->analysis_id]['allterms'] = array();
-         }
-         if (!is_array($results[$analysis->analysis_id]['goterms'])) {
-           $results[$analysis->analysis_id]['goterms'] = array();
-         }
-         $results[$analysis->analysis_id]['allterms'] = array_merge($results[$analysis->analysis_id]['allterms'], $orf['iprterms']);
-         $results[$analysis->analysis_id]['goterms'] = array_merge($results[$analysis->analysis_id]['goterms'], $orf['goterms']);
-         $i++;
-     }
-   }
-   return $results;
+      // the terms array will be an array of terms with their matches
+      // but because there may be multiple analysisfeatureprops for a single
+      // analysis (e.g. IPR XMLv4) then we need to combine everything into
+      // as single result array
+      foreach ($terms['iprterms'] as $ipr_id => $iprterm) {
+
+        // consolidate the IPR
+        $results[$analysis_id]['iprterms'][$ipr_id]['ipr_desc'] = $iprterm['ipr_desc'];
+        $results[$analysis_id]['iprterms'][$ipr_id]['ipr_name'] = $iprterm['ipr_name'];
+        $results[$analysis_id]['iprterms'][$ipr_id]['ipr_type'] = $iprterm['ipr_type'];
+        
+        
+        // merge the matches
+        if (!array_key_exists('matches',  $results[$analysis_id]['iprterms'][$ipr_id])) {
+          $results[$analysis_id]['iprterms'][$ipr_id]['matches'] = array();
+        }
+        $results[$analysis_id]['iprterms'][$ipr_id]['matches'] = array_merge($results[$analysis_id]['iprterms'][$ipr_id]['matches'], $iprterm['matches']);
+        
+        // merge the goterms
+        if (!array_key_exists('goterms',  $results[$analysis_id]['iprterms'][$ipr_id])) {
+          $results[$analysis_id]['iprterms'][$ipr_id]['goterms'] = array();
+        }
+        $results[$analysis_id]['iprterms'][$ipr_id]['goterms'] = array_merge($results[$analysis_id]['iprterms'][$ipr_id]['goterms'], $iprterm['goterms']);
+        
+      }
+      // merge the go terms
+      foreach ($terms['goterms'] as $go_id => $goterm) {
+        $results[$analysis_id]['goterms'][$go_id]['name']     = $goterm['name'];
+        $results[$analysis_id]['goterms'][$go_id]['category'] = $goterm['category'];
+      }
+      $results[$analysis_id]['analysis'] = $analysis;
+      $results[$analysis_id]['format']   = $terms['format'];
+    }
+  }
+  return $results;
 }
 /*******************************************************************************
  * tripal_get_interpro_results()

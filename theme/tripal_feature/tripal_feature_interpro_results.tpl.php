@@ -1,160 +1,234 @@
 <?php
-$feature  = $variables['node']->feature;
-$results = $feature->tripal_analysis_interpro->results->xml;
-$resultsHTML = $feature->tripal_analysis_interpro->results->html;
-if(count($results) > 0){
-	// Do not show Interpro result and the sidebar link if the it contains only 'noIPR'
-   $emptyResult = true; 
-   foreach($results as $analysis_id => $analysisprops){
-   	  $terms = $analysisprops['allterms'];
-   	  $protein_ORFs = $analysisprops['protein_ORFs'];
-   	  foreach($terms as $term){
-   	  	$ipr_id = $term[0];
-   	  	$ipr_name = $term[1];
-   	  	if(strcmp($ipr_id,'noIPR')==0){
-   	  		continue;
-   	  	} else {
-   	  		$emptyResult = false;
-   	  	}
-   	  }
-   	  foreach($protein_ORFs as $orf){
-   	  	$terms = $orf['terms'];
-   	  	$orf = $orf['orf'];
-           foreach($terms as $term){ 
-   	            $matches = $term['matches'];
-   	            $ipr_id = $term['ipr_id'];
-   	            $ipr_name = $term['ipr_name'];
-   	            $ipr_type = $term['ipr_type']; 
-   	            if(strcmp($ipr_id,'noIPR')==0){
-   	               continue;
-   	            } else {
-   	               $emptyResult = false;
-   	            }
-           }
-   	  }
-   	  if ($emptyResult) {
-   	  	return;
-   	  }
-   }
-   $i = 0;
-   foreach($results as $analysis_id => $analysisprops){ 
-     $analysis = $analysisprops['analysis'];
-     $protein_ORFs = $analysisprops['protein_ORFs']; 
-     $terms = $analysisprops['allterms']; 
-     ?>
-     <div id="tripal_feature-interpro_results_<?php print $i?>-box" class="tripal_analysis_interpro-box tripal-info-box">
-        <div class="tripal_feature-info-box-title tripal-info-box-title">InterPro Report <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></div>
-        <div class="tripal_feature-info-box-desc tripal-info-box-desc"><?php 
-            if($analysis->nid){ ?>
-               Analysis name: <a href="<?php print url('node/'.$analysis->nid) ?>"><?php print $analysis->name?></a><?php
-            } else { ?>
-               Analysis name: <?php print $analysis->name;
-            } ?><br>
-            Date Performed: <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?>
-        </div>
+$feature = $variables['node']->feature;
 
-     <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div>
-     <table id="tripal_feature-interpro_summary-<?php $i ?>-table" class="tripal_analysis_interpro-summary-table tripal-table tripal-table-horz">
-      <tr>
-        <th>Term</td>
-        <th>Name</td>
-      </tr>
-     <?php 
-     $j=0;
-     foreach($terms as $term){ 
-       $ipr_id = $term[0];
-       $ipr_name = $term[1];
-       if(strcmp($ipr_id,'noIPR')==0){
-          continue;
-       }
-       $class = 'tripal_feature-table-odd-row tripal-table-odd-row';
-       if($j % 2 == 0 ){
-         $class = 'tripal_feature-table-even-row tripal-table-even-row';
-       }?>
-       <tr class="<?php print $class ?>">
-         <td><a href="http://www.ebi.ac.uk/interpro/entry/<?php print $ipr_id ?>" target="_ipr"><?php print $ipr_id ?></a></td>
-         <td><?php print $ipr_name ?></td>         
-       </tr>
-       <?php
-       $j++;
-     } ?>
-     </table>
-     <br><br>
-     <div class="tripal_feature-interpro_results_subtitle">Analysis Details</div>
-     <table id="tripal_feature-interpro_results-<?php $i ?>-table" class="tripal-table tripal_feature_interpro-results-table tripal-table-horz" style="border-top: 0px; border-bottom: 0px">
-     <?php
-     foreach($protein_ORFs as $orf){  
-        $terms = $orf['terms'];
-        $orf = $orf['orf'];  
-        ?>
-        <?php foreach($terms as $term){ 
-          $matches = $term['matches'];
-          $ipr_id = $term['ipr_id'];
-          $ipr_name = $term['ipr_name'];
-          $ipr_type = $term['ipr_type']; 
-          if(strcmp($ipr_id,'noIPR')==0){
-             continue;
-          }
-          ?>          
-            <tr>
-              <td colspan="4" style="padding-left: 0px"><br>ORF: <?php print $orf['orf_id'] ?>, Length: <?php print $orf['orf_length'] ?> <br>
-                              IPR Term: <a href="http://www.ebi.ac.uk/interpro/IEntry?ac=<?php print $ipr_id ?>" target="_ipr"><?php print $ipr_id ?></a> <?php print " $ipr_name ($ipr_type)"; ?></th>
-            </tr>
-            <tr style="border-top: solid 1px;">
-              <th>Method</th>
-              <th>Identifier</th>
-              <th>Description</th>
-              <th>Matches<sup>*</sup></th>
-            </tr>
-            <?php $j = 0; 
-            foreach ($matches as $match){
-               $match_id = $match['match_id'];
-               $match_name = $match['match_name'];
-               $match_dbname = $match['match_dbname'];
+/* The results from an InterProScan analysis for this feature are avaialble to
+ * this template in a array of the following format:
+ *
+ *     $results[$analysis_id]['iprterms']
+ *     $results[$analysis_id]['goterms']
+ *     $results[$analysis_id]['analysis']
+ *     $results[$analysis_id]['format']
+ *
+ * Because there may be multiple InterProScan analyses for this feature, they
+ * are separated in the array by the $analysis_id key.  The deeper array 
+ * structure is as follows
+ *
+ *     An arrray containing all of the IPR terms mapped to this feature. Each
+ *     IPR term is an array with 3 elements. The first element is the IPR
+ *     accession, the second is the name and the third is the description
+ *       $results[$analysis_id]['iprterms']
+ *
+ *     A string indicating the XML format from which the original results 
+ *     were obtained. Valid values are XML4 or XML5
+ *       $results[$analysis_id]['format']
+ *
+ *     An array of terms, where GO:XXXXXXXX idicates a GO accession that
+ *     is used as a key for the array.  All GO terms for all matches are stored here.
+ *       $results[$analysis_id]['goterms']['GO:XXXXXXX']['category']
+ *       $results[$analysis_id]['goterms']['GO:XXXXXXX']['name']
+ *
+ *     An array of terms. The variable IPRXXXXXX indicates an IPR accession
+ *     that is used as a key for the array.
+ *       $results[$analysis_id]['iprterms']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['ipr_name']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['ipr_desc']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['ipr_type']
+ *
+ *
+ *     Each term may have one or more matches.  The variable $j indicates
+ *     an index variable for iterating through the matches.
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['match_id']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['match_name']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['match_desc']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['match_dbname']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['evalue']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['score']
+ *
+ *     An array of terms, where GO:XXXXXXXX idicates a GO accession that
+ *     is used as a key for the array.  GO terms are stored a second time
+ *     here to associate them with the proper IPR.
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['goterms']['GO:XXXXXXX']['category']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['goterms']['GO:XXXXXXX']['name']
+ *
+ *     Each match can have multiple start and stop locations. The variable $k
+ *     indicates an index variable for iterating through the locations
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_start']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_end']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_score']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_status']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_evalue']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_level']
+ *       $results[$analysis_id]['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_evidence']
+ */
 
 
-               $class = 'tripal_feature-table-odd-row tripal-table-odd-row';
-               if($j % 2 == 0 ){
-                  $class = 'tripal_feature-table-even-row tripal-table-even-row';
-               }?>
-               <tr class="<?php print $class ?>">
-                 <td><?php print $match_dbname ?></td>
-                 <td><?php print $match_id ?></td>
-                 <td><?php print $match_name ?></td>
-                 <td nowrap><?php
-                    $locations = $match['locations'];
-                    foreach($locations as $location){
-                      print $location['match_score']." [".$location['match_start']."-".$location['match_end']."] " . $location['match_status'] ."<br>";
-                      #$match_evidence =  $location['match_evidence'];
-                    } ?>
-                 </td>
-               </tr>
-               <?php
-               $j++;  
-            } // end foreach matches ?>
-            <tr><td colspan="4"><sup>* score [start-end] status</sup></td></tr> <?php
-        } // end foreach terms
-        $i++;
-     } // end foreach orfs ?>
-     </table>
-     </div> <?php
-   } // end for each analysis 
-} // end if
-if($resultsHTML){  ?>
-   <div id="tripal_feature-interpro_results_<?php print $i?>-box" class="tripal_analysis_interpro-box tripal-info-box">
-     <div class="tripal_feature-info-box-title tripal-info-box-title">InterPro Report <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></div>
-     <div class="tripal_feature-info-box-desc tripal-info-box-desc"><?php 
-         if($analysis->nid){ ?>
-            Analysis name: <a href="<?php print url('node/'.$analysis->nid) ?>"><?php print $analysis->name?></a><?php
-         } else { ?>
-            Analysis name: <?php print $analysis->name;
-         } ?><br>
-         Date Performed: <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?>
-     </div>
+if (property_exists($feature, 'tripal_analysis_interpro')) { ?>
+  <div id="tripal_feature-interpro_results_<?php print $i?>-box" class="tripal_analysis_interpro-box tripal-info-box">
+  <div class="tripal_feature-info-box-title tripal-info-box-title">InterPro Report <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></div> <?php
 
-   <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php 
-   print $resultsHTML;?>
-   </div> <?php
+  if (property_exists($feature->tripal_analysis_interpro->results, 'xml')) { 
+    // iterate through the results. They are organized by analysis id
+    $results = $feature->tripal_analysis_interpro->results->xml;
+    
+    if(count($results) > 0){
+
+      foreach($results as $analysis_id => $details){
+        $analysis   = $details['analysis'];
+        $iprterms   = $details['iprterms'];
+        $format     = $details['format'];
+
+        // ANALYSIS DETAILS
+        $aname = $analysis->name;
+        if (property_exists($analysis, 'nid')) {
+          $aname = l($aname, 'node/' . $analysis->nid, array('attributes' => array('target' => '_blank')));
+        }
+        $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
+        print "
+          Analysis Name: $aname
+          <br>Date Performed: $date_performed
+        ";
+
+        // ALIGNMENT SUMMARY
+        $headers = array(
+          'IPR Term', 
+          'IPR Description', 
+          'Source', 
+          'Source Term', 
+          'Source Description',
+          'Alignment'
+        );
+        
+        $rows = array();
+        foreach ($iprterms as $ipr_id => $iprterm) {
+          
+          $matches  = $iprterm['matches'];
+          $ipr_name = $iprterm['ipr_name'];
+          $ipr_desc = $iprterm['ipr_desc'];
+          $ipr_type = $iprterm['ipr_type'];
+
+          // iterate through the evidence matches
+          foreach ($matches as $match) {
+            $match_id     = $match['match_id'];
+            $match_name   = $match['match_name'];
+            $match_dbname = $match['match_dbname'];           
+          
+            $locations = $match['locations'];
+            $loc_details = '';            
+            foreach($locations as $location){
+              if ($format == 'XML4') {
+                $loc_details .= 'coord: ' . $location['match_start'] . ".." . $location['match_end'];
+                if($location['match_score']) {
+                  $loc_details .= '<br>score: ' . $location['match_score'];
+                }
+              }
+              if ($format == 'XML5') {
+                $loc_details .= 'coord: ' . $location['match_start'] . ".." . $location['match_end'];
+                if($location['match_evalue']) {
+                  $loc_details .= '<br>e-value: ' . $location['match_evalue'];
+                }
+                if($location['match_score']) {
+                  $loc_details .= '<br>score: ' . $location['match_score'];
+                }
+                $loc_details .= '<br>';
+              }
+              //$match_evidence =  $location['match_evidence'];
+            }
+            // remove the trailing <br>
+            $loc_details = substr($loc_details, 0, -4); 
+            
+            if ($ipr_id == 'noIPR') {
+              $ipr_id_link = 'None';
+              $ipr_desc = 'No IPR available';
+            }
+            else {
+              // we want to use the URL for the database
+              $ipr_db = tripal_db_get_db(array('name' => 'INTERPRO'));
+              $ipr_id_link = $ipr_id;
+              if ($ipr_db and $ipr_db->urlprefix) {
+                $ipr_id_link = l($ipr_id, $ipr_db->urlprefix . $ipr_id, array('attributes' => array('target' => '_blank')));
+              }
+            }
+            
+            // the Prosite databases are split into two libraries for InterProScan. But
+            // we can just use the PROSITE database for both of them, so rename it here.
+            $match_dbname = preg_replace('/(PROSITE)_.*/', '\1', $match_dbname);
+            
+            // get links for the matching databases
+            $match_db = tripal_db_get_db(array('name' => strtoupper($match_dbname)));
+            if ($match_db and $match_db->url) {
+              // some databases need a prefix removed
+              if ($match_dbname == "GENE3D") {
+                $fixed_id = preg_replace('/G3DSA:/','', $match_id);
+                $match_id = l($fixed_id, $match_db->urlprefix . $fixed_id, array('attributes' => array('target' => '_blank')));
+              }
+              elseif ($match_dbname == "SUPERFAMILY") {
+                $fixed_id = preg_replace('/SSF/','', $match_id);
+                $match_id = l($fixed_id, $match_db->urlprefix . $fixed_id, array('attributes' => array('target' => '_blank')));
+              }
+              // for all others, just link using the URL prefix
+              else {
+                $match_id = l($match_id, $match_db->urlprefix . $match_id, array('attributes' => array('target' => '_blank')));
+              }
+            }
+            if ($match_db and $match_db->url) {
+              $match_dbname = l($match_dbname, $match_db->url, array('attributes' => array('target' => '_blank')));
+            }
+            
+            $rows[] = array(
+              $ipr_id_link,
+              $ipr_desc,
+              $match_dbname,
+              $match_id,
+              $match_name,
+              array(
+                'data' => $loc_details,
+                'nowrap' => 'nowrap'
+              ),
+            );
+          } // end foreach ($matches as $match) {
+        } // end foreach ($iprterms as $ipr_id => $iprterm) {
+
+        if (count($rows) == 0) {
+          $rows[] = array(
+            array(
+              'data' => 'No results',
+              'colspan' => '6',
+            ),
+          );
+        }
+        $table = array(
+          'sticky' => FALSE,
+          'caption' => '',
+          'empty' => '',
+        );
+        // once we have our table array structure defined, we call Drupal's theme_table()
+        // function to generate the table.
+        print theme_table($headers, $rows, $table);
+        print "<br>";
+      }
+    }
+  }
+  // for backwards compatibility we want to ensure that if any results are stored
+  // as HTML that they can still be displayed.  Although Tripal InterPro Analysis
+  // v2.0 no longer supports importing of HTML results.
+  if(property_exists($feature->tripal_analysis_interpro->results, 'html') and 
+     $feature->tripal_analysis_interpro->results->html) {
+    $resultsHTML = $feature->tripal_analysis_interpro->results->html;
+
+    // ANALYSIS DETAILS
+    $aname = $analysis_name;
+    if (property_exists($analysis, 'nid')) {
+      $aname = l($aname, 'node/' . $analysis->nid, array('attributes' => array('target' => '_blank')));
+    }
+    $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
+    print "
+      Analysis Name: $analysis_name
+      <br>Date Performed: $date_performed
+    "; ?>
+    
+    <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php 
+    print $resultsHTML;?>
+    </div> <?php 
+  } ?>
+  </div> <?php 
 }
-?>
-
