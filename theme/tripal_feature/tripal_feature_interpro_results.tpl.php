@@ -217,7 +217,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) { ?>
 
     // ANALYSIS DETAILS
     $aname = $analysis_name;
-    if (property_exists($analysis, 'nid')) {
+    if (property_exists('nid', $analysis)) {
       $aname = l($aname, 'node/' . $analysis->nid, array('attributes' => array('target' => '_blank')));
     }
     $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
@@ -227,8 +227,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) { ?>
     "; ?>
     
     <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php 
-    print $resultsHTML;?>
-    </div> <?php 
+    print $resultsHTML;
   } ?>
   </div> <?php 
 }
