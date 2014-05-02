@@ -62,16 +62,17 @@ $feature = $variables['node']->feature;
  */
 
 
-if (property_exists($feature, 'tripal_analysis_interpro')) { ?>
-  <div id="tripal_feature-interpro_results_<?php print $i?>-box" class="tripal_analysis_interpro-box tripal-info-box">
-  <div class="tripal_feature-info-box-title tripal-info-box-title">InterPro Report <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></div> <?php
+if (property_exists($feature, 'tripal_analysis_interpro')) {
 
   if (property_exists($feature->tripal_analysis_interpro->results, 'xml')) { 
     // iterate through the results. They are organized by analysis id
     $results = $feature->tripal_analysis_interpro->results->xml;
     
-    if(count($results) > 0){
+    if(count($results) > 0){ ?>
 
+      <div id="tripal_feature-interpro_results_<?php print $i?>-box" class="tripal_analysis_interpro-box tripal-info-box">
+      <div class="tripal_feature-info-box-title tripal-info-box-title">InterPro Report <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></div> <?php
+            
       foreach($results as $analysis_id => $details){
         $analysis   = $details['analysis'];
         $iprterms   = $details['iprterms'];
@@ -205,30 +206,35 @@ if (property_exists($feature, 'tripal_analysis_interpro')) { ?>
         // function to generate the table.
         print theme_table($headers, $rows, $table);
         print "<br>";
-      }
+      } ?>
+      </div> <?php 
     }
   }
   // for backwards compatibility we want to ensure that if any results are stored
   // as HTML that they can still be displayed.  Although Tripal InterPro Analysis
   // v2.0 no longer supports importing of HTML results.
   if(property_exists($feature->tripal_analysis_interpro->results, 'html') and 
-     $feature->tripal_analysis_interpro->results->html) {
-    $resultsHTML = $feature->tripal_analysis_interpro->results->html;
+     $feature->tripal_analysis_interpro->results->html) { ?>
 
-    // ANALYSIS DETAILS
-    $aname = $analysis_name;
-    if (property_exists($analysis, 'nid')) {
-      $aname = l($aname, 'node/' . $analysis->nid, array('attributes' => array('target' => '_blank')));
-    }
-    $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
-    print "
-      Analysis Name: $analysis_name
-      <br>Date Performed: $date_performed
-    "; ?>
-    
-    <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php 
-    print $resultsHTML;?>
-    </div> <?php 
-  } ?>
-  </div> <?php 
+    <div id="tripal_feature-interpro_results_<?php print $i?>-box" class="tripal_analysis_interpro-box tripal-info-box">
+      <div class="tripal_feature-info-box-title tripal-info-box-title">InterPro Report <?php print preg_replace("/^(\d+-\d+-\d+) .*/","$1",$analysis->timeexecuted); ?></div> <?php
+  
+      $resultsHTML = $feature->tripal_analysis_interpro->results->html;
+  
+      // ANALYSIS DETAILS
+      $aname = $analysis_name;
+      if (property_exists($analysis, 'nid')) {
+        $aname = l($aname, 'node/' . $analysis->nid, array('attributes' => array('target' => '_blank')));
+      }
+      $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
+      print "
+        Analysis Name: $analysis_name
+        <br>Date Performed: $date_performed
+      "; ?>
+      
+      <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php 
+      print $resultsHTML;?>
+      </div> 
+    </div><?php 
+  }  
 }
