@@ -100,11 +100,9 @@ function chado_analysis_interpro_form($node, $form_state) {
       '#title' => t('Query Name RE'),
       '#type' => 'textfield',
       '#description' => t('Enter the regular expression that will extract the '.
-         'feature name from the query line in the interpro results. This option is '.
-         'is only required when the query does not identically match a feature '.
-         'in the database. By default, the parser will try to match results to '.
-         'a feature in Chado using the feature name.  Select the check box below'.
-         'to match against the unique name if needed.'),
+         'feature name from the interpro results. This option is '.
+         'only required when the query does not identically match a feature '.
+         'in the database. For example: ^.*id=(.*?).*$'),
       '#default_value' => $query_re,
   );
 
