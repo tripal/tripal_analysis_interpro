@@ -404,16 +404,16 @@ function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re
     elseif ($seqname and preg_match("/$query_re/", $seqname, $matches)) {
       $feature = $matches[1];
     }
-    // If no match by the regular expression then get everything up to the first space
-    elseif (preg_match('/^(.*?)\s.*$/',  $seqid, $matches)) {
-      $feature = $matches[1];
-    }
     // if no match then generate an error
     else {
       watchdog('tr_ipr_parse', "Failed: Cannot find feature for '%$seqid' using the regular expression: %query_re",
         array('%$seqid' => $seqid, '%query_re' => $query_re));
       return FALSE;
     }
+  }
+  // If no reqular expression provided then get everything up to the first space
+  elseif (preg_match('/^(.*?)\s.*$/',  $seqid, $matches)) {
+    $feature = $matches[1];
   }
   else {
     $feature =  $seqid;
