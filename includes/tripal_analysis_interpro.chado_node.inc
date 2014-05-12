@@ -117,11 +117,9 @@ function chado_analysis_interpro_form($node, $form_state) {
       '#title' => t('Query Name RE'),
       '#type' => 'textfield',
       '#description' => t('Enter the regular expression that will extract the '.
-          'feature name from the query line in the interpro results. This option is '.
+          'feature name from the query line in the interpro results. This option '.
           'is only required when the query does not identically match a feature '.
-          'in the database. By default, the parser will try to match results to '.
-          'a feature in Chado using the feature name.  Select the check box below'.
-          'to match against the unique name if needed.'),
+          'in the database. For example: ^.*id=(.*?).*$'),
       '#default_value' => $query_re,
   );
 
@@ -154,6 +152,16 @@ function chado_analysis_interpro_validate($node, &$form, &$form_state) {
   $node->interprofile      = trim($node->interprofile);
   $node->query_uniquename  = trim($node->query_uniquename);
   $node->query_type        = trim($node->query_type);
+  $node->query_re          = trim($node->query_re);
+  
+  
+  // check the regular expression to make sure it is valid
+  $result = 0;
+  $code = "\$result = preg_match(\"test\", \"/" . $node->query_re . "/\")";
+  eval($code);
+  if ($result === FALSE) {
+    form_set_error('query_re', 'Invalid regular expression.');
+  }
   
   if($node->interprofile and !is_readable($node->interprofile)) {
     form_set_error('interprofile', "Can not read InterPro XML output file: '$node->interprofile'. Please check file permissions or typos in the file path.");

@@ -151,7 +151,7 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
         $seqname = (string) $attrs['name'];
 
         // match the name of the feature in the XML file to a feature in Chado
-        $feature_id = tripal_analysis_interpro_match_feature($seqid, $query_re, $query_uniquename);
+        $feature_id = tripal_analysis_interpro_match_feature($seqid, $seqname, $query_re, $query_uniquename);
         if (!$feature_id) {
           continue;
         }
@@ -291,24 +291,24 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
     // match the protein id with the feature name
     $feature_id = 0;
     $attrs = $protein->attributes();
-    $seqname = $attrs['id'];
+    $seqid = $attrs['id'];
 
     // is the sequence name a generic name (i.e. 'Sequence_1') then the
     // results do not contain the original sequence names.  The only
     // option we have is to use the filename.  This will work in the case of
     // Blast2GO which stores the XML for each sequence in a file with the
     // the filename the name of the sequence
-    if (preg_match('/Sequence_\d+/', $seqname)) {
+    if (preg_match('/Sequence_\d+/', $seqid)) {
       $filename = preg_replace('/^.*\/(.*).xml$/', '$1', $interproxmlfile);
       watchdog('tr_ipr_parse', "Sequence name for results is not specific, using filename: %filename as the sequence name\n", array('%filename' => $filename), WATCHDOG_NOTICE);
-      $seqname = $filename;
+      $seqid = $filename;
     }
 
     // Remove _ORF from the sequence name
-    $seqname = preg_replace('/^(.+)_\d+_ORF\d+.*/', '$1', $seqname);
+    $seqid = preg_replace('/^(.+)_\d+_ORF\d+.*/', '$1', $seqid);
     
     // match the name of the feature in the XML file to a feature in Chado
-    $feature_id = tripal_analysis_interpro_match_feature($seqname, $query_re, $query_uniquename);
+    $feature_id = tripal_analysis_interpro_match_feature($seqid, '', $query_re, $query_uniquename);
     if (!$feature_id) {
       continue;
     }
@@ -347,7 +347,9 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
  * in the InterProScan XML file
  * 
  * @param $seqid
- *   The sequence name provided by the InterProXML file
+ *   The sequence id provided by the InterProXML file
+ * @param $seqname
+ *   The sequence name provided by the InterProXML file (may not always be present)
  * @param $query_re
  *   The regular expression provided by the user when the chado_analysis_interpro
  *   node was created by the user
@@ -359,32 +361,37 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
  * @return
  *   The feature_id of the matching feature or NULL if not found.  
  */
-function tripal_analysis_interpro_match_feature($seqid, $query_re, $query_uniquename) {
+function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re, $query_uniquename) {
 
   $feature = '';
   
   // if a regular expression is provided then pick out the portion requested
   $matches = array();
-  if ($query_re and preg_match("/$query_re/", $seqid, $matches)) {
-    $feature = $matches[1];
-  }
-  // If no match by the regular expression then get everything up to the first space
-  else {
-    if (preg_match('/^(.*?)\s.*$/',  $seqid, $matches)) {
+  if ($query_re) {
+    
+    // first try the seqid if the regex works then use it
+    if (preg_match("/$query_re/", $seqid, $matches)) {
       $feature = $matches[1];
     }
-    // if no match up to the first space then just use the entire string
+    // second, try the seqname
+    elseif ($seqname and preg_match("/$query_re/", $seqname, $matches)) {
+      $feature = $matches[1];
+    }
+    // if no match then generate an error
     else {
-      $feature =  $seqid;
+      watchdog('tr_ipr_parse', "Failed: Cannot find feature for '%$seqid' using the regular expression: %query_re",
+        array('%$seqid' => $seqid, '%query_re' => $query_re));
+      return FALSE;
     }
   }
-  
-  if (!$feature and $query_re) {
-    watchdog('tr_ipr_parse', "Failed: Cannot find feature for '%seqname' using the regular expression: %query_re",
-      array('%seqname' => $seqname, '%query_re' => $query_re));
-    return NULL;
+  // If no reqular expression provided then get everything up to the first space
+  elseif (preg_match('/^(.*?)\s.*$/',  $seqid, $matches)) {
+    $feature = $matches[1];
   }
-  
+  else {
+    $feature =  $seqid;
+  }
+    
   // now find the feature in chado
   $select = array();
   if ($query_uniquename) {
