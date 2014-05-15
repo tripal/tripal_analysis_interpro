@@ -7,14 +7,24 @@
 function tripal_analysis_interpro_node_info() {
   $nodes = array();
   $nodes['chado_analysis_interpro'] = array(
-      'name' => t('Analysis: Interpro'),
-      'base' => 'chado_analysis_interpro',
-      'description' => t('An interpro analysis from the chado database'),
-      'has_title' => FALSE,
-      'title_label' => t('Analysis: Interpro'),
-      'has_body' => FALSE,
-      'body_label' => t('Interpro Analysis Description'),
-      'locked' => TRUE
+    'name' => t('Analysis: Interpro'),
+    'base' => 'chado_analysis_interpro',
+    'description' => t('An interpro analysis from the chado database'),
+    'has_title' => FALSE,
+    'title_label' => t('Analysis: Interpro'),
+    'has_body' => FALSE,
+    'body_label' => t('Interpro Analysis Description'),
+    'locked' => TRUE,
+    'chado_node_api' => array(
+      'base_table' => 'analysis',
+      'hook_prefix' => 'chado_analysis_interpro',
+      'record_type_title' => array(
+        'singular' => t('InterPro Analysis'),
+        'plural' => t('InterPro Analyses')
+      ),
+      // this module will not sync.  that will be handled by the
+      // analysis module
+    )
   );
   return $nodes;
 }
@@ -206,6 +216,9 @@ function chado_analysis_interpro_load($nodes) {
       $analysis->tripal_analysis_interpro->interproparameters = $prop_values[1];
     }
     
+    // Now get the title
+    $node->title = chado_get_node_title($node);
+    
     $nodes[$nid]->analysis = $analysis;
   }
 }
@@ -367,4 +380,15 @@ function tripal_analysis_interpro_node_view($node, $view_mode, $langcode) {
       }
       break;
   }
+}
+
+
+/**
+ * Implements [content_type]_chado_node_default_title_format().
+ *
+ * Defines a default title format for the Chado Node API to set the titles on
+ * Chado Analysis nodes based on chado fields.
+ */
+function chado_analysis_interpro_chado_node_default_title_format() {
+  return '[analysis.name]';
 }

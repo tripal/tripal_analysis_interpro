@@ -1,7 +1,10 @@
 <?php
 require_once "includes/tripal_analysis_interpro.chado_node.inc";
 require_once "includes/tripal_analysis_interpro.xml_parser.inc";
+require_once "includes/tripal_analysis_interpro.admin.inc";
+
 require_once "theme/tripal_analysis_interpro.theme.inc";
+
 
 /*******************************************************************************
  * Tripal Interpro lets users show/hide iprscan results associated with a tripal
@@ -12,6 +15,23 @@ function tripal_analysis_interpro_init() {
   // Add javascript and style sheet
    drupal_add_css(drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/css/tripal_analysis_interpro.css', 'theme');
    drupal_add_js( drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro.js');
+}
+/**
+ * tripal_analysis_interpro_menu()
+ * HOOK: Implementation of hook_menu()
+ * Entry points and paths of the module
+ */
+function tripal_analysis_interpro_menu() {
+  $items['admin/tripal/extension/tripal_interpro_analysis'] = array(
+    'title' => 'Tripal InterPro Analyses',
+    'description' => 'Settings for the displays of InterProScan analysis results.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tripal_analysis_interpro_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
 }
 
 /**
