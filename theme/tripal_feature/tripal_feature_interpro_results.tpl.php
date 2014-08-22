@@ -100,6 +100,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
         );
         
         $rows = array();
+        $iprterms = $iprterms ? $iprterms : array();
         foreach ($iprterms as $ipr_id => $iprterm) {
           
           $matches  = $iprterm['matches'];
