@@ -9,7 +9,7 @@
  */
 function tripal_analysis_interpro_install() {
    // create the module's data directory
-   tripal_create_moddir('tripal_analysis_interpro');
+   tripal_create_files_dir('tripal_analysis_interpro');
 
    // We need to register to tripal_analysis module so it can provide a control
    // for our interpro result. Basically the registration is done by inserting
@@ -18,7 +18,7 @@ function tripal_analysis_interpro_install() {
    // we need to define HOOK_get_settings() for the module to work properly.
    
    // Inert into drupal's {tripal_analysis}
-   tripal_analysis_register_child('tripal_analysis_interpro');
+   tripal_register_analysis_child('tripal_analysis_interpro');
    
    // add the CVterms needed for this module
    tripal_analysis_interpro_add_cvterms();
@@ -36,7 +36,7 @@ function tripal_analysis_interpro_uninstall() {
    // we perform a db_table_exists() check before the deletion
    
    //Delete the settings from {tripal_analysis} table
-   tripal_analysis_unregister_child('tripal_analysis_interpro');
+   tripal_unregister_analysis_child('tripal_analysis_interpro');
    
    // Delete module's variables from variables table.
    db_query("DELETE FROM {variable} WHERE name=:name",
@@ -137,84 +137,84 @@ function tripal_analysis_interpro_add_dbs() {
 *
 */
 function tripal_analysis_interpro_add_cvterms() {
-   // Add cvterm 'analysis_interpro_output_iteration_hits' for inserting into featureprop table
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_xmloutput_hit', 
-       'def' => 'Hit in the interpro XML output. Each hit belongs to a chado feature. This cvterm represents a hit in the output'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_output_hit', 
-       'def' => 'Hit in the interpro HTML output. Each hit belongs to a chado feature. This cvterm represents a hit in the output'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_settings', 
-       'def' => 'Settings of an interpro analysis, including output file and run parameters separated by a bar |'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_interproparameters', 
-       'def' => 'The parameters used when executing an InterProScan job'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_interprofile', 
-       'def' => 'Used to hold the name of the XML file containing the InterProScan results'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_parsego', 
-       'def' => 'Indicates whether or not the GO terms should be extracted when parsing the InterProScan XML file'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_parseHTML', 
-       'def' => 'Indicates that the input file is in HTML format. This functionality is deprecated and may not work, but is provided for backwards compatability.'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_query_re', 
-       'def' => 'The regular expression for finding the feature name in the query definition line of the InterPro results'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_query_type', 
-       'def' => 'The feature type (e.g. mRNA, polypeptide) of the query input file. This type is used to identify the query feature when multiple features have the same name'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_query_uniquename', 
-       'def' => 'Indicates if the matched name in the query definition line of the blast results is feature uniquename'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
-   tripal_cv_add_cvterm(
-     array(
-       'name' => 'analysis_interpro_output_keywords', 
-       'def' => 'Selected keywords for interpro html output which are indexed for search.'
-     ), 
-     'tripal', 0, 1, 'tripal'
-   );
+  // Add cvterm 'analysis_interpro_output_iteration_hits' for inserting into featureprop table
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_xmloutput_hit', 
+    'definition' => 'Hit in the interpro XML output. Each hit belongs to a chado feature. This cvterm represents a hit in the output',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_output_hit', 
+    'definition' => 'Hit in the interpro HTML output. Each hit belongs to a chado feature. This cvterm represents a hit in the output',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_settings', 
+    'definition' => 'Settings of an interpro analysis, including output file and run parameters separated by a bar |',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_interproparameters', 
+    'definition' => 'The parameters used when executing an InterProScan job',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_interprofile', 
+    'definition' => 'Used to hold the name of the XML file containing the InterProScan results',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_parsego', 
+    'definition' => 'Indicates whether or not the GO terms should be extracted when parsing the InterProScan XML file',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_parseHTML', 
+    'definition' => 'Indicates that the input file is in HTML format. This functionality is deprecated and may not work, but is provided for backwards compatability.',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_query_re', 
+    'definition' => 'The regular expression for finding the feature name in the query definition line of the InterPro results',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_query_type', 
+    'definition' => 'The feature type (e.g. mRNA, polypeptide) of the query input file. This type is used to identify the query feature when multiple features have the same name',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           ;
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_query_uniquename', 
+    'definition' => 'Indicates if the matched name in the query definition line of the blast results is feature uniquename',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
+  tripal_insert_cvterm(array(
+    'name' => 'analysis_interpro_output_keywords', 
+    'definition' => 'Selected keywords for interpro html output which are indexed for search.',
+    'cv_name' => 'tripal',
+    'db_name' => 'tripal',
+  ));
+           
 }
 
 /*******************************************************************************

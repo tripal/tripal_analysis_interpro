@@ -192,13 +192,13 @@ function chado_analysis_interpro_load($nodes) {
     $analysis = $node->analysis;
     $analysis_id = $analysis->analysis_id;
 
-    $interpro_settings  = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_settings');
-    $interprofile      = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_interprofile');
-    $interproparameters= tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_interproparameters');
-    $parsego           = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_parsego');
-    $query_re          = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_re');
-    $query_type        = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_type');
-    $query_uniquename  = tripal_analysis_get_property($analysis->analysis_id, 'analysis_interpro_query_uniquename');
+    $interpro_settings = chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_settings', 'tripal');
+    $interprofile      = chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_interprofile', 'tripal');
+    $interproparameters= chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_interproparameters', 'tripal');
+    $parsego           = chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_parsego', 'tripal');
+    $query_re          = chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_query_re', 'tripal');
+    $query_type        = chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_query_type', 'tripal');
+    $query_uniquename  = chado_get_property('analysis', $analysis->analysis_id, 'analysis_interpro_query_uniquename', 'tripal');
 
     $analysis->tripal_analysis_interpro = new stdClass;
     $analysis->tripal_analysis_interpro->interprofile      = $interprofile->value;
@@ -240,12 +240,12 @@ function chado_analysis_interpro_insert($node) {
   tripal_analysis_insert_property($node->analysis_id, 'analysis_type', 'tripal_analysis_interpro');
 
   // now add in the remaining settings as a single property but separated by bars
-  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interprofile', trim($node->interprofile));
-  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_interproparameters', trim($node->interproparameters));
-  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_parsego', trim($node->parsego));
-  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_re', trim($node->query_re));
-  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_type', trim($node->query_type));
-  tripal_analysis_insert_property($node->analysis_id, 'analysis_interpro_query_uniquename', trim($node->query_uniquename));
+  chado_insert_property('analysis', $node->analysis_id, 'analysis_interpro_interprofile', 'tripal', trim($node->interprofile));
+  chado_insert_property('analysis', $node->analysis_id, 'analysis_interpro_interproparameters', 'tripal', trim($node->interproparameters));
+  chado_insert_property('analysis', $node->analysis_id, 'analysis_interpro_parsego', 'tripal', trim($node->parsego));
+  chado_insert_property('analysis', $node->analysis_id, 'analysis_interpro_query_re', 'tripal', trim($node->query_re));
+  chado_insert_property('analysis', $node->analysis_id, 'analysis_interpro_query_type', 'tripal', trim($node->query_type));
+  chado_insert_property('analysis', $node->analysis_id, 'analysis_interpro_query_uniquename', 'tripal', trim($node->query_uniquename));
 
   // submit the parsing jobs
   chado_analysis_interpro_submit_job($node);
@@ -265,20 +265,20 @@ function chado_analysis_interpro_update($node) {
   $node->query_type        = trim($node->query_type);
   
   // set the type for this analysis
-  tripal_analysis_update_property($node->analysis_id, 'analysis_type', 'tripal_analysis_interpro', 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_type', 'tripal_analysis_interpro', 1);
 
   // now add in the remaining settings as a single property but separated by bars
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_interprofile', trim($node->interprofile), 1);
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_interproparameters', trim($node->interproparameters), 1);
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_parsego', trim($node->parsego), 1);
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_query_re', trim($node->query_re), 1);
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_query_type', trim($node->query_type), 1);
-  tripal_analysis_update_property($node->analysis_id, 'analysis_interpro_query_uniquename', trim($node->query_uniquename), 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_interpro_interprofile', 'tripal', trim($node->interprofile), 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_interpro_interproparameters', 'tripal', trim($node->interproparameters), 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_interpro_parsego', 'tripal', trim($node->parsego), 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_interpro_query_re', 'tripal', trim($node->query_re), 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_interpro_query_type', 'tripal', trim($node->query_type), 1);
+  chado_update_property('analysis', $node->analysis_id, 'analysis_interpro_query_uniquename', 'tripal', trim($node->query_uniquename), 1);
 
   // if this analysis uses the old style settings cvterm then remove that term
-  $old = tripal_analysis_get_property($node->analysis_id, 'analysis_interpro_settings');
+  $old = chado_get_property('analysis', $node->analysis_id, 'analysis_interpro_settings', 'tripal');
   if (count($old) > 0) {
-    tripal_analysis_delete_property($node->analysis_id, 'analysis_interpro_settings');
+    tripal_analysis_delete_property($node->analysis_id, 'analysis_interpro_settings', 'tripal');
   }
 
   // submit the parsing jobs

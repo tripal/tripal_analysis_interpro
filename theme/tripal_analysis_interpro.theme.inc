@@ -41,7 +41,7 @@ function tripal_get_interpro_XML_results($feature_id) {
       ),
     ),
   );
-  $afeatureprops = tripal_core_chado_select('analysisfeatureprop', array('*'), $select);
+  $afeatureprops = chado_select_record('analysisfeatureprop', array('*'), $select);
 
   // iterate through all of the interpro XML properties for this feature
   $results = array();
@@ -49,7 +49,7 @@ function tripal_get_interpro_XML_results($feature_id) {
     foreach ($afeatureprops as $index => $afeatureprop) {
 
       // get the analysis feature record
-      $analysisfeature_arr = tripal_core_chado_select('analysisfeature', array('analysis_id'),
+      $analysisfeature_arr = chado_select_record('analysisfeature', array('analysis_id'),
           array('analysisfeature_id' => $afeatureprop->analysisfeature_id));
       $analysisfeature = $analysisfeature_arr[0];
 

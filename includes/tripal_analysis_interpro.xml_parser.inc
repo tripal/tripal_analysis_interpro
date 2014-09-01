@@ -15,7 +15,7 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
   try {
   
     // clear out the anslysisfeature table for this analysis before getting started
-    tripal_core_chado_delete('analysisfeature', array('analysis_id' => $analysis_id));
+    chado_delete_record('analysisfeature', array('analysis_id' => $analysis_id));
   
     // If user input a file(e.g. interpro.xml)
     if (is_file($interproxmlfile)) {
@@ -133,7 +133,7 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
     $idx_iterations ++;
     if ($idx_iterations % $interval == 0) {
       $percentage = sprintf("%.4f",  (($file_no + ($idx_iterations / $no_iterations)) / $total_files) * 100);
-      tripal_job_set_progress($job_id, $percentage);
+      tripal_set_job_progress($job_id, $percentage);
       print "Parsing file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
     
@@ -171,7 +171,7 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
         tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id);
       
         // get the DB id for the GO database
-        $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
+        $parsego = chado_get_property('analysis', $analysis_id, 'analysis_interpro_parsego');
         $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name = 'GO'")->fetchField();
         if ($parsego and !$go_db_id) {
           watchdog('tr_ipr_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
@@ -205,9 +205,9 @@ function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id
   
   // Insert into analysisfeature table only if it doesn't already exist
   $values = array('feature_id' => $feature_id, 'analysis_id' => $analysis_id);
-  $analysisfeature = tripal_core_chado_select('analysisfeature', array('*'), $values);
+  $analysisfeature = chado_select_record('analysisfeature', array('*'), $values);
   if (count($analysisfeature) == 0) {
-    $analysisfeature = tripal_core_chado_insert('analysisfeature', $values);
+    $analysisfeature = chado_insert_record('analysisfeature', $values);
     $analysisfeature_id = $analysisfeature['analysisfeature_id'];
   }
   else {
@@ -236,7 +236,7 @@ function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id
     'value' => $xml_obj->asXML(),
     'rank' => $rank,
   );
-  $success = tripal_core_chado_insert('analysisfeatureprop', $values);
+  $success = chado_insert_record('analysisfeatureprop', $values);
   if (!$success) {
     watchdog('tr_ipr_parse', 'ERROR: cannot add the XML for the feature into the analysisfeatureprop table',
     array(), WATCHDOG_ERROR);
@@ -284,7 +284,7 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
     $idx_iterations ++;    
     if ($idx_iterations % $interval == 0) {
       $percentage = sprintf("%.4f",  (($file_no + ($idx_iterations / $no_iterations)) / $total_files) * 100);
-      tripal_job_set_progress($job_id, $percentage);
+      tripal_set_job_progress($job_id, $percentage);
       print "Parsing file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
 
@@ -328,7 +328,7 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
     tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id);
     
     // get the DB id for the GO database
-    $parsego = tripal_analysis_get_property($analysis_id, 'analysis_interpro_parsego');
+    $parsego = chado_get_property('analysis', $analysis_id, 'analysis_interpro_parsego', 'tripal');
     $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name='GO'")->fetchField();
     if ($parsego and !$go_db_id) {
       watchdog('tr_ipr_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
@@ -409,7 +409,7 @@ function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re
     );
   }
   
-  $feature_arr = tripal_core_chado_select('feature', array('feature_id'), $select);
+  $feature_arr = chado_select_record('feature', array('feature_id'), $select);
   if (count($feature_arr) > 1) {
     watchdog('tr_ipr_parse', "Ambiguous: '%feature' matches more than one feature and is being skipped.",
     array('%feature' => $feature), WATCHDOG_WARNING);
@@ -444,23 +444,22 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
   
   // iterate through each othe IPR terms
   foreach ($iprterms as $ipr_id => $iprterm) {
-    
-    
+
     if ($iprterm['ipr_name'] and $iprterm['ipr_name'] != 'noIPR') {
-            
-      // add all terms but the 'noIPR' term
-      $term = array(
+
+      // currently there is no InterPro Ontology OBO file so we can't
+      // load the IPR terms that way, we need to just add them
+      // as we encounter them. If the term already exists
+      // we do not want to update it.
+      $ipr_cvterm = tripal_insert_cvterm(array(
         'id' => "INTERPRO:$ipr_id",
         'name' => $iprterm['ipr_name'],
         'def'  => $iprterm['ipr_desc'],
         'namespace' => 'INTERPRO',
         'is_obsolete' => 1,
-      );
-      // currently there is no InterPro Ontology OBO file so we can't
-      // load the IPR terms that way, we need to just add them
-      // as we encounter them. If the term already exists
-      // we do not want to update it.
-      $ipr_cvterm = tripal_cv_add_cvterm($term, NULL, 0, 0);
+        'cv_name' => 'INTERPRO',
+        'db_name' => 'INTERPRO'
+      ));
       if (!$ipr_cvterm) {
         watchdog('tr_ipr_parse', "Failed: Cannot find cvterm: %name '%value'",
           array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
@@ -475,9 +474,9 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
         'pub_id' => 1,
       );
       $columns = array('*');
-      $cvterm = tripal_core_chado_select('feature_cvterm', $columns, $values);
+      $cvterm = chado_select_record('feature_cvterm', $columns, $values);
       if (count($cvterm) == 0) {
-        $success = tripal_core_chado_insert('feature_cvterm', $values);
+        $success = chado_insert_record('feature_cvterm', $values);
         if (!$success) {
           watchdog('tr_ipr_parse', "Failed: Cannot add cvterm: %name '%value'",
             array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
@@ -494,10 +493,10 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
         'value' => $ipr_id
       );
       $options = array('statement_name' => 'sel_analysisfeatureprop_antyrava');
-      $results = tripal_core_chado_select('analysisfeatureprop', array('analysisfeatureprop_id'), $values, $options);
+      $results = chado_select_record('analysisfeatureprop', array('analysisfeatureprop_id'), $values, $options);
       if (count($results) == 0 ) {
         $options = array('statement_name' => 'ins_analysisfeatureprop_antyrava');
-        $success = tripal_core_chado_insert('analysisfeatureprop', $values, $options);
+        $success = chado_insert_record('analysisfeatureprop', $values, $options);
         if (!$success) {
           watchdog('tr_ipr_parse', "Failed:  Cannot add cvterm as an analysis feature property for the interpro term: %name '%value'",
             array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
@@ -552,9 +551,9 @@ function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisf
         'cvterm_id' => $goterm_id,
         'pub_id' => 1
       );
-      $feature_cvterm = tripal_core_chado_select('feature_cvterm', array('*'), $values);
+      $feature_cvterm = chado_select_record('feature_cvterm', array('*'), $values);
       if (sizeof($feature_cvterm) == 0) {
-        $feature_cvterm = tripal_core_chado_insert('feature_cvterm', $values);
+        $feature_cvterm = chado_insert_record('feature_cvterm', $values);
         if (!$feature_cvterm) {
           watchdog('tr_ipr_parse', "ERROR:  Cannot add cvterm to the feature for term: %goterm_id'\n",
           array('%goterm_id' => $goterm_id), WATCHDOG_ERROR);
@@ -568,10 +567,10 @@ function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisf
         'type_id' => $goterm_id,
         'rank' => 0
       );
-      $analysisfeatureprop = tripal_core_chado_select('analysisfeatureprop', array('*'), $values);
+      $analysisfeatureprop = chado_select_record('analysisfeatureprop', array('*'), $values);
       if (sizeof($analysisfeatureprop) == 0) {
         $values['value'] = $matches[1];
-        $analysisfeatureprop = tripal_core_chado_insert('analysisfeatureprop', $values);
+        $analysisfeatureprop = chado_insert_record('analysisfeatureprop', $values);
       }
     } // end if preg_match
   } // end for each goterm

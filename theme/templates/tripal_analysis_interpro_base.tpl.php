@@ -5,7 +5,7 @@ $analysis = $variables['node']->analysis;
 $interpro = $node->analysis->tripal_analysis_interpro;
 
 // the description is a text field so we want to expand that
-$analysis = tripal_core_expand_chado_vars($analysis,'field','analysis.description'); 
+$analysis = chado_expand_var($analysis, 'field', 'analysis.description'); 
 
 // the $headers array is an array of fields to use as the colum headers. 
 // additional documentation can be found here 
