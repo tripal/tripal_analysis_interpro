@@ -256,7 +256,7 @@ function chado_analysis_interpro_insert($node) {
   */
 function chado_analysis_interpro_update($node) {
 
-  // insert the analysistripal_core_generate_chado_var
+  // insert the analysis
   chado_analysis_update($node);
 
   // trim character fields

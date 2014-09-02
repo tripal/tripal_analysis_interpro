@@ -54,7 +54,7 @@ function tripal_get_interpro_XML_results($feature_id) {
       $analysisfeature = $analysisfeature_arr[0];
 
       // get the analysis record and the analysis_id
-      $analysis = tripal_core_generate_chado_var('analysis',
+      $analysis = chado_generate_var('analysis',
           array('analysis_id' => $analysisfeature->analysis_id));
       $analysis_id = $analysis->analysis_id;
       if (!array_key_exists($analysis_id, $results)) {
