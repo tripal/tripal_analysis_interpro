@@ -1,12 +1,6 @@
 <?php
 /**
- * Implementation of hook_settings_form for creating the 
- * administrative settings page
- * 
- * @param $form
- * @param $form_state
- * 
- * @return
+ * A form for setting administrative options
  */
 function tripal_analysis_interpro_settings_form($form, &$form_state) {
   $form = array();
@@ -22,15 +16,19 @@ function tripal_analysis_interpro_settings_form($form, &$form_state) {
     'unique_option' => '[analysis.name] ([analysis.sourcename]) [analysis.program] version [analysis.programversion]'
   );
   chado_add_admin_form_set_title($form, $form_state, $details);
+
+  // Add form elements for customizing the node URLs.
+  $details = array(
+    'module' => 'tripal_analysis_interpro',
+    'content_type' => 'chado_analysis_interpro',
+    // An array of options to use under "Page URL"
+    // the key should be the token and the value should be the human-readable option
+    'options' => array(
+      '/analysis/[analysis.analysis_id]' => 'Analysis ID',
+      '/analysis/[analysis.program]/[analysis.programversion]/[analysis.sourcename]' => 'Unique Contraint: Includes the program name & version as well as the source name'
+    )
+  );
+  chado_add_admin_form_set_url($form, $form_state, $details);
   
   return $form;
-}
-
-/**
- * 
- * @param $form
- * @param $form_state
- */
-function tripal_analysis_interpro_settings_form_submit($form,  &$form_state) {
-
 }

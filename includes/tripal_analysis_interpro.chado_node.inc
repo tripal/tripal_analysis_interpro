@@ -351,11 +351,9 @@ function chado_analysis_interpro_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
-/*******************************************************************************
- * tripal_analysis_interpro_nodeapi()
-* HOOK: Implementation of hook_nodeapi()
-* Display interpro results for allowed node types
-*/
+/**
+ * Implements hook_node_view().
+ */
 function tripal_analysis_interpro_node_view($node, $view_mode, $langcode) {
   switch ($node->type) {
     case 'chado_analysis_interpro':
@@ -405,18 +403,21 @@ function chado_analysis_interpro_chado_node_default_title_format() {
 function tripal_analysis_interpro_node_insert($node) {
 
   switch ($node->type) {
-  	case 'chado_analysis_interpro':
+    case 'chado_analysis_interpro':
 
-  	  // build the analysis variable
-  	  $analysis_id = chado_get_id_from_nid('analysis', $node->nid);
-  	  $values = array('analysis_id' => $analysis_id);
-  	  $analysis = chado_generate_var('analysis', $values);
-  	  $node->analysis = $analysis;
+      // build the analysis variable
+      $analysis_id = chado_get_id_from_nid('analysis', $node->nid);
+      $values = array('analysis_id' => $analysis_id);
+      $analysis = chado_generate_var('analysis', $values);
+      $node->analysis = $analysis;
 
-  	  // Now get the title
-  	  $node->title = chado_get_node_title($node);
+      // Now get the title
+      $node->title = chado_get_node_title($node);
+      
+      // Now use the API to set the path.
+      chado_set_node_url($node);
 
-  	  break;
+      break;
   }
 }
 
@@ -429,17 +430,17 @@ function tripal_analysis_interpro_node_insert($node) {
 function tripal_analysis_interpro_node_update($node) {
 
   switch ($node->type) {
-  	case 'chado_analysis_interpro':
+    case 'chado_analysis_interpro':
 
-  	  // build the analysis variable
-  	  $analysis_id = chado_get_id_from_nid('analysis', $node->nid);
-  	  $values = array('analysis_id' => $analysis_id);
-  	  $analysis = chado_generate_var('analysis', $values);
-  	  $node->analysis = $analysis;
+      // build the analysis variable
+      $analysis_id = chado_get_id_from_nid('analysis', $node->nid);
+      $values = array('analysis_id' => $analysis_id);
+      $analysis = chado_generate_var('analysis', $values);
+      $node->analysis = $analysis;
 
-  	  // Now get the title
-  	  $node->title = chado_get_node_title($node);
+      // Now get the title
+      $node->title = chado_get_node_title($node);
 
-  	  break;
+      break;
   }
 }

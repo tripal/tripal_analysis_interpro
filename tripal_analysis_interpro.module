@@ -6,10 +6,9 @@ require_once "includes/tripal_analysis_interpro.admin.inc";
 require_once "theme/tripal_analysis_interpro.theme.inc";
 
 
-/*******************************************************************************
- * Tripal Interpro lets users show/hide iprscan results associated with a tripal
- * feature
- ******************************************************************************/
+/**
+ * Implemenst hook_init().
+ */
 function tripal_analysis_interpro_init() {
 
   // Add javascript and style sheet
@@ -17,9 +16,7 @@ function tripal_analysis_interpro_init() {
    drupal_add_js( drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro.js');
 }
 /**
- * tripal_analysis_interpro_menu()
- * HOOK: Implementation of hook_menu()
- * Entry points and paths of the module
+ * Implements hook_menu().
  */
 function tripal_analysis_interpro_menu() {
   $items['admin/tripal/extension/tripal_interpro_analysis'] = array(
@@ -35,50 +32,7 @@ function tripal_analysis_interpro_menu() {
 }
 
 /**
- *
- *
- * @ingroup tripal_analysis_interpro
- */
-function tripal_analysis_interpro_block($op = 'list', $delta = 0, $edit=array()) {
-  switch ($op) {
-    case 'list':
-      $blocks['ipr_base']['info'] = t('Analysis: Interpro Details');
-      $blocks['ipr_base']['cache'] = BLOCK_NO_CACHE;
-      
-      $blocks['featureipr']['info'] = t('Tripal Feature Interpro Results');
-      $blocks['featureipr']['cache'] = BLOCK_NO_CACHE;
-      
-      
-      return $blocks;
-  
-  
-    case 'view':
-      if (user_access('access chado_analysis_interpro content') and arg(0) == 'node' and is_numeric(arg(1))) {
-        $nid = arg(1);
-        $node = node_load($nid);
-      
-        $block = array();
-        switch ($delta) {
-          case 'ipr_base':
-            $block['subject'] = t('Interpro Details');
-            $block['content'] = theme('tripal_analysis_interpro_base', $node);
-            break;
-          case 'featureipr':
-            $block['subject'] = t('Interpro Results');
-            $block['content'] = theme('tripal_feature_interpro_results', $node);
-            break;
-          
-          default :
-        }
-        return $block;
-      }
-  }
-}
-
-/************************************************************************
- *  We need to let drupal know about our theme functions and their arguments.
- *  We create theme functions to allow users of the module to customize the
- *  look and feel of the output generated in this module
+ * Implements hook_theme().
  */
 function tripal_analysis_interpro_theme($existing, $type, $theme, $path) {
 
@@ -101,7 +55,7 @@ function tripal_analysis_interpro_theme($existing, $type, $theme, $path) {
       'path' => "$path/theme/templates",
     ),
     
-      // feature templates
+    // Feature templates.
     'tripal_feature_interpro_results' => array(
       'variables' => array('node' => NULL),
       'template' => 'tripal_feature_interpro_results',
@@ -112,41 +66,32 @@ function tripal_analysis_interpro_theme($existing, $type, $theme, $path) {
   return $items;
 }
 
-
-
-
-
-/*******************************************************************************
- * Set the permission types that the chado module uses.  Essentially we
- * want permissionis that protect creation, editing and deleting of chado
- * data objects
+/**
+ * Implements hook_permission().
  */
 function tripal_analysis_interpro_permission() {
-   return array(
-      'access chado_analysis_interpro content' => array(
-        'title' => t('View Interpro Analyses'),
-        'description' => t('Allow users to view InterPro analysis pages.'),
-      ),
-      'create chado_analysis_interpro content'=> array(
-        'title' => t('Create Interpro Analyses'),
-        'description' => t('Allow users to create InterPro analysis pages.'),
-      ),
-      'delete chado_analysis_interpro content'=> array(
-        'title' => t('Delete Interpro Analyses'),
-        'description' => t('Allow users to delete InterPro analysis pages.'),
-      ),
-      'edit chado_analysis_interpro content' => array(
+  return array(
+    'access chado_analysis_interpro content' => array(
+      'title' => t('View Interpro Analyses'),
+      'description' => t('Allow users to view InterPro analysis pages.'),
+    ),
+    'create chado_analysis_interpro content'=> array(
+      'title' => t('Create Interpro Analyses'),
+      'description' => t('Allow users to create InterPro analysis pages.'),
+    ),
+    'delete chado_analysis_interpro content'=> array(
+      'title' => t('Delete Interpro Analyses'),
+      'description' => t('Allow users to delete InterPro analysis pages.'),
+    ),
+    'edit chado_analysis_interpro content' => array(
       'title' => t('Edit Interpro Analyses'),
       'description' => t('Allow users to edit InterPro analysis pages.'),
     ),
-   );
+  );
 }
 
-
 /**
- *
- *
- * @ingroup tripal_analysis_interpro
+ * Implements hook_job_describe_args().
  */
 function tripal_analysis_interpro_job_describe_args($callback, $args) {
 
@@ -182,12 +127,7 @@ function tripal_analysis_interpro_job_describe_args($callback, $args) {
 }
 
 /**
- * Implementation of hook_form_alter()
- *
- * @param $form
- * @param $form_state
- * @param $form_id
- *
+ * Implements hook_form_alter().
  */
 function tripal_analysis_interpro_form_alter(&$form, &$form_state, $form_id) {
 

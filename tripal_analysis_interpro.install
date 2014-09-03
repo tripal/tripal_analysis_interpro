@@ -1,26 +1,21 @@
 <?php
 /*
  * @file
+ * 
  * Tripal Analysis Interpro Module
  */
 
-/*******************************************************************************
+/**
  * Implementation of hook_install().
  */
 function tripal_analysis_interpro_install() {
-   // create the module's data directory
+   // Create the module's data directory.
    tripal_create_files_dir('tripal_analysis_interpro');
 
-   // We need to register to tripal_analysis module so it can provide a control
-   // for our interpro result. Basically the registration is done by inserting
-   // modulename into the drupal {tripal_analysis} table AND inserting required
-   // information to the chado Analysis table. Also in tripal_analysis_interpro.module,
-   // we need to define HOOK_get_settings() for the module to work properly.
-   
-   // Inert into drupal's {tripal_analysis}
+   // Register this module as an analysis.
    tripal_register_analysis_child('tripal_analysis_interpro');
    
-   // add the CVterms needed for this module
+   // Add the CV terms needed for this module.
    tripal_analysis_interpro_add_cvterms();
 }
 
@@ -224,7 +219,7 @@ function tripal_analysis_interpro_add_cvterms() {
 function tripal_analysis_interpro_requirements($phase) {
    $requirements = array();
    if ($phase == 'install') {
-      if (!function_exists('tripal_create_moddir') || !function_exists('tripal_analysis_register_child')) {
+      if (!function_exists('tripal_create_moddir') || !function_exists('tripal_register_analysis_child')) {
          $requirements ['tripal_analysis_interpro'] = array(
             'title' => "tripal_analysis_interpro",
             'value' => "error. Some required modules are just being installed. Please try again.",
