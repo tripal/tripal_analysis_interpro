@@ -32,3 +32,10 @@ function tripal_analysis_interpro_settings_form($form, &$form_state) {
   
   return $form;
 }
+
+/**
+ * Implements hook_chado_node_default_url_format()
+ */
+function chado_analysis_interpro_chado_node_default_url_format() {
+  return '/analysis/[analysis.analysis_id]';
+}
