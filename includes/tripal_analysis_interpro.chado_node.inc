@@ -1,9 +1,8 @@
-<?php 
+<?php
 
-/*******************************************************************************
- *  Provide information to drupal about the node types that we're creating
-*  in this module
-*/
+/**
+ * Implements hook_node_info();
+ */
 function tripal_analysis_interpro_node_info() {
   $nodes = array();
   $nodes['chado_analysis_interpro'] = array(
@@ -18,17 +17,34 @@ function tripal_analysis_interpro_node_info() {
     'chado_node_api' => array(
       'base_table' => 'analysis',
       'hook_prefix' => 'chado_analysis_interpro',
+      'linking_table' => 'chado_analysis',
       'record_type_title' => array(
         'singular' => t('InterPro Analysis'),
         'plural' => t('InterPro Analyses')
       ),
-      // this module will not sync.  that will be handled by the
-      // analysis module
+      'sync_filters' => array(
+        'type_id' => FALSE,
+        'organism_id' => FALSE,
+        'checkboxes' => array('name'),
+      ),
     )
   );
   return $nodes;
 }
 
+/**
+ * Implements hook_chado_node_sync_select_query().
+ */
+function chado_analysis_interpro_chado_node_sync_select_query($query) {
+  $query['joins'][] = 'INNER JOIN {analysisprop} PROP ON PROP.analysis_id = ANALYSIS.analysis_id';
+  $query['joins'][] = 'INNER JOIN {cvterm} CVTP ON CVTP.cvterm_id = PROP.type_id';
+  $query['where_clauses']['analysis_type'][] = 'CVTP.name = :type_name';
+  $query['where_clauses']['property_value'][] = 'PROP.value = :prop_value';
+  $query['where_args']['analysis_type'][':type_name'] = 'Analysis Type';
+  $query['where_args']['property_value'][':prop_value'] = 'interpro_analysis';
+
+  return $query;
+}
 /*******************************************************************************
  *  The following function proves access control for users trying to
 *  perform actions on data managed by this module
@@ -72,7 +88,7 @@ function chado_analysis_interpro_form($node, $form_state) {
   $query_re = '';
   $query_type = '';
   $query_uniquename = '';
-  
+
   if (property_exists ( $node, 'analysis' )) {
     $analysis = $node->analysis;
     $interprofile = $analysis->tripal_analysis_interpro->interprofile;
@@ -154,17 +170,17 @@ function chado_analysis_interpro_form($node, $form_state) {
  *
  */
 function chado_analysis_interpro_validate($node, &$form, &$form_state) {
-  
+
   // use the analysis parent to validate the node
   tripal_analysis_validate($node, $form, $form_state);
-  
+
   // trim character fields
   $node->interprofile      = trim($node->interprofile);
   $node->query_uniquename  = trim($node->query_uniquename);
   $node->query_type        = trim($node->query_type);
   $node->query_re          = trim($node->query_re);
-  
-  
+
+
   // check the regular expression to make sure it is valid
   $result = 0;
   $code = "\$result = preg_match(\"test\", \"/" . $node->query_re . "/\")";
@@ -172,11 +188,11 @@ function chado_analysis_interpro_validate($node, &$form, &$form_state) {
   if ($result === FALSE) {
     form_set_error('query_re', 'Invalid regular expression.');
   }
-  
+
   if($node->interprofile and !is_readable($node->interprofile)) {
     form_set_error('interprofile', "Can not read InterPro XML output file: '$node->interprofile'. Please check file permissions or typos in the file path.");
   }
-  
+
 }
 /**
  *
@@ -216,10 +232,10 @@ function chado_analysis_interpro_load($nodes) {
       $analysis->tripal_analysis_interpro->interprofile       = $prop_values[0];
       $analysis->tripal_analysis_interpro->interproparameters = $prop_values[1];
     }
-    
+
     // Now get the title
     $node->title = chado_get_node_title($node);
-    
+
     $nodes[$nid]->analysis = $analysis;
   }
 }
@@ -227,7 +243,7 @@ function chado_analysis_interpro_load($nodes) {
  *
  */
 function chado_analysis_interpro_insert($node) {
-  
+
   // insert the analysis. If the analysis already exist then this
   // call will link it to a new Drupa node.
   chado_analysis_insert($node);
@@ -236,9 +252,12 @@ function chado_analysis_interpro_insert($node) {
   $node->interprofile      = trim($node->interprofile);
   $node->query_uniquename  = trim($node->query_uniquename);
   $node->query_type        = trim($node->query_type);
-  
+
   $record = array('table'=> 'analysis', 'id' => $node->analysis_id);
-  
+
+  // Add the analysis type.
+  chado_insert_property($record, array('type_name' =>'Analysis Type', 'cv_name' => 'analysis_property', 'value' => 'interpro_analysis'));
+
   // now add in the remaining settings as a single property but separated by bars
   chado_insert_property($record, array('type_name' => 'analysis_interpro_interprofile', 'cv_name' => 'tripal', 'value' => trim($node->interprofile)));
   chado_insert_property($record, array('type_name' => 'analysis_interpro_interproparameters', 'cv_name' => 'tripal', 'value' => trim($node->interproparameters)));
@@ -263,12 +282,13 @@ function chado_analysis_interpro_update($node) {
   $node->interprofile      = trim($node->interprofile);
   $node->query_uniquename  = trim($node->query_uniquename);
   $node->query_type        = trim($node->query_type);
-  
+
   $record = array('table'=> 'analysis', 'id' => $node->analysis_id);
   $options = array('insert_if_missing' => TRUE);
-  
-  // set the type for this analysis
-  chado_update_property($record, array('type_name' => 'analysis_type', 'value' => 'tripal_analysis_interpro'), $options);
+
+  // Update the analysis type.
+  chado_update_property($record, array('type_name' =>'Analysis Type', 'cv_name' => 'analysis_property', 'value' => 'interpro_analysis'), $options);
+
 
   // now add in the remaining settings as a single property but separated by bars
   chado_update_property($record, array('type_name' => 'analysis_interpro_interprofile', 'cv_name' => 'tripal', 'value' => trim($node->interprofile)), $options);
@@ -413,7 +433,7 @@ function tripal_analysis_interpro_node_insert($node) {
 
       // Now get the title
       $node->title = chado_get_node_title($node);
-      
+
       // Now use the API to set the path.
       chado_set_node_url($node);
 

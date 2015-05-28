@@ -20,14 +20,30 @@ function tripal_analysis_interpro_init() {
  */
 function tripal_analysis_interpro_menu() {
   $items['admin/tripal/extension/tripal_interpro_analysis'] = array(
-    'title' => 'Tripal InterPro Analyses',
-    'description' => 'Settings for the displays of InterProScan analysis results.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('tripal_analysis_interpro_settings_form'),
+    'title' => 'InterPro Analyses',
+    'description' => 'Administrative pages for the Tripal InterPro Analysis module.',
+    'page callback' => 'tripal_analysis_interpro_admin_view',
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
   );
-
+  $items['admin/tripal/extension/tripal_interpro_analysis/configuration'] = array(
+    'title' => 'Settings',
+    'description' => 'Settings for the displays of InterPro analysis results.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tripal_analysis_interpro_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1
+  );
+  $items['admin/tripal/extension/tripal_interpro_analysis/sync'] = array(
+    'title' => ' Sync',
+    'description' => 'Create pages on this site for InterPro analyses',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('chado_node_sync_form', 'tripal_analysis_interpro', 'chado_analysis_interpro'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2
+  );
   return $items;
 }
 
@@ -54,7 +70,7 @@ function tripal_analysis_interpro_theme($existing, $type, $theme, $path) {
       'template' => 'tripal_analysis_interpro_teaser',
       'path' => "$path/theme/templates",
     ),
-    
+
     // Feature templates.
     'tripal_feature_interpro_results' => array(
       'variables' => array('node' => NULL),
@@ -62,7 +78,7 @@ function tripal_analysis_interpro_theme($existing, $type, $theme, $path) {
       'path' => "$path/theme/templates",
     ),
   );
-  
+
   return $items;
 }
 
