@@ -6,17 +6,17 @@
  */
 function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
   $parsego, $query_re, $query_type, $query_uniquename, $job_id) {
-  
-  
+
+
   $transaction = db_transaction();
   print "\nNOTE: Loading of this InterProScan XML file is performed using a database transaction. \n" .
       "If the load fails or is terminated prematurely then the entire set of \n" .
       "insertions/updates is rolled back and will not be found in the database\n\n";
   try {
-  
+
     // clear out the anslysisfeature table for this analysis before getting started
     chado_delete_record('analysisfeature', array('analysis_id' => $analysis_id));
-  
+
     // If user input a file(e.g. interpro.xml)
     if (is_file($interproxmlfile)) {
       tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
@@ -27,18 +27,18 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
       $pattern = sql_regcase($interproxmlfile . "/*.xml");
       $total_files = count(glob($pattern));
       print "$total_files file(s) to be parsed.\n";
-  
+
       $interval = intval($total_files * 0.01);
       if ($interval == 0) {
         $interval = 1;
       }
       $no_file = 0;
-  
+
       // Parsing all files in the directory
       while ($file = readdir($dir_handle)) {
         if (preg_match("/^.*\.xml/i", $file)) {
           tripal_analysis_interpro_parseSingleXMLFile($analysis_id, "$interproxmlfile/$file",
-            $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $no_file, $total_files);        
+            $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $no_file, $total_files);
         }
         $no_file ++;
       }
@@ -56,9 +56,9 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
  *
  */
 function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlfile,
-  $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status = 1, 
+  $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status = 1,
   $file_no = 0, $total_files = 1) {
-      
+
   $filename = preg_replace('/^.*\/(.*)$/' , '$1', $interproxmlfile);
 
   // Load the XML file
@@ -71,25 +71,25 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
   // If starts with 'protein-matches' or 'nucleotide-sequence-matches' then this is InterPro v5 XML
   if (preg_match('/^protein-matches/', $xml->getname())) {
     tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
-      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status, 
+      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status,
       $file_no, $total_files);
   }
   elseif (preg_match('/^nucleotide-sequence-matches/', $xml->getname())) {
     tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
-      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status, 
+      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status,
       $file_no, $total_files);
-  } 
+  }
   // the  remaining are for InterPro v4 XML
   elseif (preg_match('/^EBIInterProScanResults/', $xml->getname())) {
     // results are from the EBI InterProScan Website Output
     tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
-      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status, 
+      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status,
       $file_no, $total_files);
   }
   elseif (preg_match('/^interpro_matches/', $xml->getname())) {
     // rseults are from the command-line InterPrScan version
     tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
-      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status, 
+      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status,
       $file_no, $total_files);
   }
   else {
@@ -98,7 +98,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
   }
 }
 /**
- * 
+ *
  * @param $xml
  * @param $analysis_id
  * @param $filename
@@ -112,7 +112,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
  * @param $total_files
  */
 function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
-  $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status, 
+  $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status,
   $file_no, $total_files) {
 
   // Count the number of sequences to be processed
@@ -125,10 +125,10 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
     $interval = 1;
   }
   $idx_iterations = 0;
-  
+
   // Processed each nucelotide sequence entry
   foreach ($xml as $entity) {
-    
+
     // Set job status
     $idx_iterations ++;
     if ($idx_iterations % $interval == 0) {
@@ -136,12 +136,12 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
       tripal_set_job_progress($job_id, $percentage);
       print "Parsing file, $filename, $file_no of $total_files  ($percentage%). Memory: " . number_format(memory_get_usage()) . " bytes\r";
     }
-    
+
     // get details about this sequence
     $children = $entity->children();
     foreach ($children as $child) {
       $childname = $child->getname();
-      
+
       // the <xref> tag holds the sequence name and description.  There could
       // be multiple sequences that have the same protein and hence the same
       // matches. So, for each one in the file, we want to re-parse the matches
@@ -151,11 +151,12 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
         $seqname = (string) $attrs['name'];
 
         // match the name of the feature in the XML file to a feature in Chado
-        $feature_id = tripal_analysis_interpro_match_feature($seqid, $seqname, $query_re, $query_uniquename);
+        $feature_id = tripal_analysis_interpro_match_feature($seqid, $seqname,
+          $query_re, $query_uniquename, $query_type);
         if (!$feature_id) {
           continue;
         }
-        
+
         // create an entry in the analysisfeature table and add the XML for this feature
         // to the analysisfeatureprop table
         $analysisfeature_id = tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id, $entity);
@@ -165,11 +166,11 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
 
         // parse the XML
         $ipr_array = tripal_analysis_interpro_parse_feature_XML($entity->asXML(), $feature_id);
-    
+
         // add in the IPR terms
         $iprterms = $ipr_array['iprterms'];
         tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id);
-      
+
         // get the DB id for the GO database
         $parsego = chado_get_property(
           array('table' => 'analysis', 'id' => $analysis_id),
@@ -189,10 +190,10 @@ function tripal_analysis_interpro_parseXML5($xml, $analysis_id, $filename,
 }
 
 /**
- * 
+ *
  */
 function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id, $xml_obj) {
-  
+
   // Get cvterm_id for 'analysis_interpro_xmloutput_hits' which is required
   // for inserting into the analysisfeatureprop table
   $sql = "
@@ -205,7 +206,7 @@ function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id
       CV.name = 'tripal'
   ";
   $type_id = chado_query($sql)->fetchField();
-  
+
   // Insert into analysisfeature table only if it doesn't already exist
   $values = array('feature_id' => $feature_id, 'analysis_id' => $analysis_id);
   $analysisfeature = chado_select_record('analysisfeature', array('*'), $values);
@@ -216,7 +217,7 @@ function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id
   else {
     $analysisfeature_id = $analysisfeature[0]->analysisfeature_id;
   }
-  
+
   // Insert interpro xml results into analysisfeatureprop table
   // but first check to see if we have an existing entry, if we do, then
   // increment the rank
@@ -226,13 +227,13 @@ function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id
     WHERE analysisfeature_id = :analysisfeature_id AND type_id = :type_id
     ORDER BY rank DESC
   ";
-  $args = array(':analysisfeature_id' => $analysisfeature_id, ':type_id' => $type_id); 
+  $args = array(':analysisfeature_id' => $analysisfeature_id, ':type_id' => $type_id);
   $result = chado_query($sql, $args)->fetchObject();
   $rank = 0;
   if ($result) {
     $rank = $result->rank + 1;
   }
-  
+
   $values = array(
     'analysisfeature_id' => $analysisfeature_id,
     'type_id' => $type_id,
@@ -244,14 +245,14 @@ function tripal_analysis_interpro_add_analysis_feature($feature_id, $analysis_id
     watchdog('tr_ipr_parse', 'ERROR: cannot add the XML for the feature into the analysisfeatureprop table',
     array(), WATCHDOG_ERROR);
   }
-  
+
   return $analysisfeature_id;
 }
 /**
  * @param $xml
  */
 function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
-      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status, 
+      $parsego, $query_re, $query_type, $query_uniquename, $job_id, $uptate_status,
       $file_no, $total_files) {
 
   // If there is an EBI header then we need to skip that
@@ -282,9 +283,9 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
 
   // Processed each protein
   foreach ($proteins as $protein) {
-    
+
     // Set job status
-    $idx_iterations ++;    
+    $idx_iterations ++;
     if ($idx_iterations % $interval == 0) {
       $percentage = sprintf("%.4f",  (($file_no + ($idx_iterations / $no_iterations)) / $total_files) * 100);
       tripal_set_job_progress($job_id, $percentage);
@@ -309,9 +310,10 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
 
     // Remove _ORF from the sequence name
     $seqid = preg_replace('/^(.+)_\d+_ORF\d+.*/', '$1', $seqid);
-    
+
     // match the name of the feature in the XML file to a feature in Chado
-    $feature_id = tripal_analysis_interpro_match_feature($seqid, '', $query_re, $query_uniquename);
+    $feature_id = tripal_analysis_interpro_match_feature($seqid, '', $query_re,
+      $query_uniquename, $query_type);
     if (!$feature_id) {
       continue;
     }
@@ -322,17 +324,17 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
     if (!$analysisfeature_id) {
       continue;
     }
-     
+
     // parse the XML
     $ipr_array = tripal_analysis_interpro_parse_feature_XML($protein->asXML(), $feature_id);
-    
+
     // add in the IPR terms
     $iprterms = $ipr_array['iprterms'];
     tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id);
-    
+
     // get the DB id for the GO database
     $parsego = chado_get_property(
-      array('table' => 'analysis', 'id' => $analysis_id), 
+      array('table' => 'analysis', 'id' => $analysis_id),
       array('type_name' => 'analysis_interpro_parsego', 'cv_name' => 'tripal')
     );
     $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name='GO'")->fetchField();
@@ -344,14 +346,14 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
       $goterms = $ipr_array['goterms'];
       tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisfeature_id, $go_db_id);
     }
-  } // end foreach ($proteins as $protein) 
-     
+  } // end foreach ($proteins as $protein)
+
   return;
 }
 /**
  * Attempts to find a feature in Chado that matches the sequence id as listed
  * in the InterProScan XML file
- * 
+ *
  * @param $seqid
  *   The sequence id provided by the InterProXML file
  * @param $seqname
@@ -363,18 +365,21 @@ function tripal_analysis_interpro_parseXML4($xml, $analysis_id, $filename,
  *   The value provided by the user when the chado_analysis_interpro node was
  *   created that indicates TRUE if the $seqid is the uniquename. Otherwise
  *   it is assumed to just be the feature name.
- *   
+ * @param $query_type
+ *   The feature type name (e.g. mRNA).
+ *
  * @return
- *   The feature_id of the matching feature or NULL if not found.  
+ *   The feature_id of the matching feature or NULL if not found.
  */
-function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re, $query_uniquename) {
+function tripal_analysis_interpro_match_feature($seqid, $seqname = '',
+  $query_re, $query_uniquename, $query_type) {
 
   $feature = '';
-  
+
   // if a regular expression is provided then pick out the portion requested
   $matches = array();
   if ($query_re) {
-    
+
     // first try the seqid if the regex works then use it
     if (preg_match("/$query_re/", $seqid, $matches)) {
       $feature = $matches[1];
@@ -397,7 +402,7 @@ function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re
   else {
     $feature =  $seqid;
   }
-    
+
   // now find the feature in chado
   $select = array();
   if ($query_uniquename) {
@@ -414,7 +419,7 @@ function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re
       'name' => $query_type,
     );
   }
-  
+
   $feature_arr = chado_select_record('feature', array('feature_id'), $select);
   if (count($feature_arr) > 1) {
     watchdog('tr_ipr_parse', "Ambiguous: '%feature' matches more than one feature and is being skipped.",
@@ -427,14 +432,14 @@ function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re
     return NULL;
   }
   $feature_id = $feature_arr[0]->feature_id;
-  
+
   return $feature_id;
 }
 /**
  * Adds the InterProScan IPR terms to the analysisfeatureprop table and the
- * feature_cvterm table for the feature.  If the IPR terms do not exist in 
+ * feature_cvterm table for the feature.  If the IPR terms do not exist in
  * the 'INTERPRO' vacabulary then they are automatically added
- * 
+ *
  * @param $ipterms
  *   An array of terms where each array of the following format:
  *     $iprterms['IPRXXXXXX']['ipr_name']
@@ -443,11 +448,11 @@ function tripal_analysis_interpro_match_feature($seqid, $seqname = '', $query_re
  * @param $feature_id
  *   The feature to which the terms should be assocaited
  * @param $analysisfeature_id
- *   The analysisfeature to which the terms should be listed as properties 
+ *   The analysisfeature to which the terms should be listed as properties
  *
  */
 function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysisfeature_id) {
-  
+
   // iterate through each othe IPR terms
   foreach ($iprterms as $ipr_id => $iprterm) {
 
@@ -471,7 +476,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
           array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
         continue;
       }
-       
+
       // Insert IPR terms into the feature_cvterm table
       // the default pub_id of 1 (NULL) is used. if the cvterm already exists then just skip adding it
       $values = array(
@@ -489,7 +494,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
           continue;
         }
       }
-       
+
       // Insert IPR terms into the analysisfeatureprop table but only if it
       // doesn't already exist
       $values = array(
@@ -515,7 +520,7 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
 /**
  * Adds GO terms to the analysisfeatureprop  table and the feature_cvterm
  * table for the feature.
- *  
+ *
  * @param $goterms
  *   An array containin each GO terms in the following format:
  *     $goterms['GO:XXXXXXX']['category']
@@ -523,18 +528,18 @@ function tripal_analysis_interpro_load_iprterms($iprterms, $feature_id, $analysi
  * @param $feature_id
  *   The feature to which the terms should be assocaited
  * @param $analysisfeature_id
- *   The analysisfeature to which the terms should be listed as properties 
+ *   The analysisfeature to which the terms should be listed as properties
  * @param $go_db_id
  *   The db_id for the GO (Gene Ontology)
  */
 function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisfeature_id, $go_db_id) {
-  
+
   // cycle through the GO terms and add them to the database
   foreach ($goterms as $go_id => $goterm) {
-     
+
     // seperate the 'GO:' from the term
     if (preg_match("/^.*?GO:(\d+).*$/", $go_id, $matches)) {
-  
+
       // Find cvterm_id for the matched GO term
       $sql = "
         SELECT cvterm_id
@@ -549,7 +554,7 @@ function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisf
           array('%term' => $matches[1]), WATCHDOG_WARNING);
         continue;
       }
-  
+
       // Insert GO terms into feature_cvterm table. Default pub_id = 1 (NULL) was used. But
       // only insert if not already there
       $values = array(
@@ -566,7 +571,7 @@ function tripal_analysis_interpro_load_goterms($goterms, $feature_id, $analysisf
           continue;
         }
       }
-  
+
       // Insert GO terms into analysisfeatureprop table
       $values = array(
         'analysisfeature_id' => $analysisfeature_id,
@@ -643,11 +648,11 @@ function tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id) 
 
   // Load the XML into an object
   $xml_obj = simplexml_load_string($interpro_xml);
-  
+
   // we can distinguish between XML4 and XML5 by looking at the name and attributes
   $name  = $xml_obj->getname();
   $attrs = $xml_obj->attributes();
-  
+
   if ($name == 'nucleotide-sequence') {
    return tripal_analysis_interpro_parse_feature_XML5_nucelotide($xml_obj, $feature_id);
   }
@@ -683,36 +688,36 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
 
   // iterate through each element of the 'protein' children
   foreach ($xml_obj->children() as $element) {
-    
+
     if($element->getname() == 'matches') {
       // iterate through the match elements
       foreach ($element->children() as $match_element) {
         // initalize the $match array where we store details about this match
         $match = array();
-        
+
         // sometimes an alignment is made but there is no corresponding IPR term
         // so we default the match IPR term to 'noIPR'
         $match_ipr_id = 'noIPR';
         $match_ipr_type = '';
         $match_ipr_desc = '';
         $match_ipr_name = '';
-        
+
         // iterate through the children of this match to collect the details
         foreach ($match_element->children() as $match_details) {
-          
-          // the <signature> tag contains information about the match in the 
-          // member database (e.g. GENE3D, PFAM, etc). 
+
+          // the <signature> tag contains information about the match in the
+          // member database (e.g. GENE3D, PFAM, etc).
           if ($match_details->getname() == 'signature') {
-            
+
             // get the details about this match
             $attrs = $match_details->attributes();
             $match['match_name'] = (string) $attrs['name']; // the name of the match
             $match['match_desc'] = (string) $attrs['desc']; // the match description
             $match['match_id']   = (string) $attrs['ac'];   // the library accession number
-            
+
             // find the IPR term and GO Terms associated with this match
             foreach ($match_details->children() as $sig_element) {
-              
+
               // the <entry> tag contains the IPR term entry that corresponds to this match
               if ($sig_element->getname() == 'entry') {
                 $attrs = $sig_element->attributes();
@@ -720,14 +725,14 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
                 $match_ipr_type = (string) $attrs['type']; // e.g. DOMAIN, SITE
                 $match_ipr_name = (string) $attrs['name']; // the match name
                 $match_ipr_desc = (string) $attrs['desc']; // the match description
-                
+
                 // initialize the term sub array and matches if they haven't already been added.
                 if (!array_key_exists($match_ipr_id, $terms['iprterms'])) {
                   $terms['iprterms'][$match_ipr_id] = array();
                   $terms['iprterms'][$match_ipr_id]['matches'] = array();
                   $terms['iprterms'][$match_ipr_id]['goterms'] = array();
                 }
-                
+
                 // get the GO terms which are children of the <entry> element
                 foreach ($sig_element->children() as $entry_element) {
                   if ($entry_element->getname() == 'go-xref') {
@@ -736,7 +741,7 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
                     $goterm = array();
                     $goterm['category'] = (string) $attrs['category'];
                     $goterm['name']     = (string) $attrs['name'];
-                    
+
                     // GO terms are stored twice. Once with the IPR term to which they were found
                     // and second as first-level element of the $terms array where all terms are present
                     $terms['iprterms'][$match_ipr_id]['goterms'][$go_id] = $goterm;
@@ -753,7 +758,7 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
               }
             }
           } // end if($match_element->getname() == 'signature') {
-          
+
           // the <locations> tag lists the alignment locations for this match
           if($match_details->getname() == 'locations') {
             $k = 0;
@@ -768,17 +773,17 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
             }
           } // end if($match_details->getname() == 'locations') {
         } // end foreach ($match_element->children() as $match_details) {
-        
+
         $attrs = $match_element->attributes();
         $match['evalue'] = (string) $attrs['evalue'];
         $match['score']  = (string) $attrs['score'];
-        
+
         // add this match to the IPR term key to which it is associated
         $terms['iprterms'][$match_ipr_id]['matches'][] = $match;
         $terms['iprterms'][$match_ipr_id]['ipr_type'] = $match_ipr_type;
         $terms['iprterms'][$match_ipr_id]['ipr_name'] = $match_ipr_name;
         $terms['iprterms'][$match_ipr_id]['ipr_desc'] = $match_ipr_desc;
-        
+
         // make sure we have a goterms array in the event that none were found
         if (!array_key_exists('goterms', $terms['iprterms'][$match_ipr_id])) {
           $terms['iprterms'][$match_ipr_id]['goterms'] = array();
@@ -787,7 +792,7 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
       } // end foreach ($element->children() as $match_element) {
     } // end if($element->getname() == 'matches') {
   } // end foreach ($xml_obj->children() as $element) {
-  
+
   //if (count($terms['iprterms']) > 0) {
   //  dpm($terms);
   //}
@@ -808,42 +813,42 @@ function tripal_analysis_interpro_parse_feature_XML5_protein($xml_obj, $feature_
  *  function
  */
 function tripal_analysis_interpro_parse_feature_XML5_nucelotide($xml_obj, $feature_id) {
-  
+
   $results  = array();
   $results['format'] = 'XML5';
   $results['iprterms'] = array();
   $results['goterms'] = array();
-  
+
   // iterate through each element of the 'nucleotide-sequence' children
   foreach ($xml_obj->children() as $element) {
     if($element->getname() == 'orf') {
       foreach ($element->children() as $sub_element) {
-        
+
         // the <protein> tag is an ORF in the nucleotide sequence
         if ($sub_element->getname() == 'protein') {
           $terms = tripal_analysis_interpro_parse_feature_XML5_protein($sub_element, $feature_id);
 
-          // becase there are multiple ORFs per sequence we want to combine the 
+          // becase there are multiple ORFs per sequence we want to combine the
           // results into a single set to be returned by this function
           foreach ($terms['iprterms'] as $ipr_id => $iprterm) {
-            
+
             // consolidate the IPR
             $results['iprterms'][$ipr_id]['ipr_desc'] = $iprterm['ipr_desc'];
             $results['iprterms'][$ipr_id]['ipr_name'] = $iprterm['ipr_name'];
             $results['iprterms'][$ipr_id]['ipr_type'] = $iprterm['ipr_type'];
-            
+
             // merge the matches
             if (!array_key_exists('matches', $results['iprterms'][$ipr_id])) {
               $results['iprterms'][$ipr_id]['matches'] = array();
             }
             $results['iprterms'][$ipr_id]['matches'] = array_merge($results['iprterms'][$ipr_id]['matches'], $iprterm['matches']);
-            
+
             // merge the goterms
             if (!array_key_exists('goterms', $results['iprterms'][$ipr_id])) {
               $results['iprterms'][$ipr_id]['goterms'] = array();
             }
             $results['iprterms'][$ipr_id]['goterms'] = array_merge($results['iprterms'][$ipr_id]['goterms'], $iprterm['goterms']);
-            
+
             // merge the go terms
             foreach ($iprterm['goterms'] as $go_id => $goterm) {
               $results['goterms'][$go_id]['name']     = $goterm['name'];
@@ -885,11 +890,11 @@ function tripal_analysis_interpro_parse_feature_XML4($xml_obj, $feature_id) {
 
   // iterate through each interpro results for this protein
   foreach ($xml_obj->children() as $intepro) {
-    
+
     // get the interpro term for this match
     $attr = $intepro->attributes();
     $ipr_id = (string) $attr["id"];
-    
+
     $terms['iprterms'][$ipr_id]['ipr_name'] = (string) $attr["name"];
     $terms['iprterms'][$ipr_id]['ipr_desc'] = (string) $attr["name"];
     $terms['iprterms'][$ipr_id]['ipr_type'] = (string) $attr["type"];
@@ -901,9 +906,9 @@ function tripal_analysis_interpro_parse_feature_XML4($xml_obj, $feature_id) {
     foreach ($intepro->children() as $level1) {
       $element_name = $level1->getName();
       if ($element_name == 'match') {
-        
+
         $match = array();
-        
+
         // get the match name for this match
         $attr = $level1->attributes();
         $match['match_id']     = (string) $attr["id"];
@@ -924,7 +929,7 @@ function tripal_analysis_interpro_parse_feature_XML4($xml_obj, $feature_id) {
             $k++;
           }
         }
-        
+
         // add this match to the IPR term key to which it is associated
         $terms['iprterms'][$ipr_id]['matches'][] = $match;
       }
@@ -946,7 +951,7 @@ function tripal_analysis_interpro_parse_feature_XML4($xml_obj, $feature_id) {
       }
     }
   }
-  
+
   //if (count($terms['iprterms']) > 0) {
   //  dpm($terms);
   //}

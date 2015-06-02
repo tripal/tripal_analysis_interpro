@@ -101,12 +101,12 @@ function chado_analysis_interpro_form($node, $form_state) {
 
   $moreSettings ['interpro'] = 'Interpro Settings';
   $form['interpro'] = array(
-      '#title' => t('Interpro Settings'),
-      '#type' => 'fieldset',
-      '#description' => t('Specific Settings for Interpro Analysis.'),
-      '#collapsible' => TRUE,
-      '#attributes' => array('id' => 'interpro-extra-settings'),
-      '#weight' => 11
+    '#title' => t('Interpro Settings'),
+    '#type' => 'fieldset',
+    '#description' => t('Specific Settings for Interpro Analysis.'),
+    '#collapsible' => TRUE,
+    '#attributes' => array('id' => 'interpro-extra-settings'),
+    '#group' => 'chado_node_api',
   );
   $form['interpro']['interprofile'] = array(
       '#title' => t('InterProScan XML File/Directory: (if you input a directory without the tailing slash, all xml files in the directory will be loaded)'),
@@ -156,13 +156,16 @@ function chado_analysis_interpro_form($node, $form_state) {
       '#default_value' => $query_uniquename,
   );
 
+  $cv = tripal_get_cv(array('name' => 'sequence'));
+  $cv_id = $cv->cv_id;
   $form['interpro']['query_type'] = array(
-      '#title' => t('Query Type'),
-      '#type' => 'textfield',
-      '#description' => t('Please enter the Sequence Ontology term (e.g. contig, polypeptide, mRNA) that describes '.
-          'the query sequences in the InterProScan XML results file(s).  This is only necessary if two '.
-          'or more sequences have the same name.'),
-      '#default_value' => $query_type,
+    '#title' => t('Query Type'),
+    '#type' => 'textfield',
+    '#description' => t('Please enter the Sequence Ontology term (e.g. contig, polypeptide, mRNA) that describes '.
+        'the query sequences in the InterProScan XML results file(s).  This is only necessary if two '.
+        'or more sequences have the same name.'),
+    '#default_value' => $query_type,
+    '#autocomplete_path' => "admin/tripal/chado/tripal_cv/cvterm/auto_name/$cv_id",
   );
   return $form;
 }

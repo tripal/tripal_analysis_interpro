@@ -1,7 +1,7 @@
 <?php
 /*
  * @file
- * 
+ *
  * Tripal Analysis Interpro Module
  */
 
@@ -9,12 +9,10 @@
  * Implementation of hook_install().
  */
 function tripal_analysis_interpro_install() {
-   // Create the module's data directory.
-   tripal_create_files_dir('tripal_analysis_interpro');
 
    // Register this module as an analysis.
    tripal_register_analysis_child('tripal_analysis_interpro');
-   
+
    // Add the CV terms needed for this module.
    tripal_analysis_interpro_add_cvterms();
 }
@@ -23,16 +21,16 @@ function tripal_analysis_interpro_install() {
  * Implementation of hook_uninstall().
  */
 function tripal_analysis_interpro_uninstall() {
-   
+
    // Delete all information associate with the module
-   // Drupal complains when the user tries to uninstall tripal_analysis 
+   // Drupal complains when the user tries to uninstall tripal_analysis
    // and tripal_analysis_interpro at the same time. This is because Drupal drops
    // the {tripal_analysis} table before we can delete anything from it. Thus,
    // we perform a db_table_exists() check before the deletion
-   
+
    //Delete the settings from {tripal_analysis} table
    tripal_unregister_analysis_child('tripal_analysis_interpro');
-   
+
    // Delete module's variables from variables table.
    db_query("DELETE FROM {variable} WHERE name=:name",
             array(':name' => 'tripal_analysis_interpro_setting'));
@@ -134,82 +132,82 @@ function tripal_analysis_interpro_add_dbs() {
 function tripal_analysis_interpro_add_cvterms() {
   // Add cvterm 'analysis_interpro_output_iteration_hits' for inserting into featureprop table
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_xmloutput_hit', 
+    'name' => 'analysis_interpro_xmloutput_hit',
     'definition' => 'Hit in the interpro XML output. Each hit belongs to a chado feature. This cvterm represents a hit in the output',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_output_hit', 
+    'name' => 'analysis_interpro_output_hit',
     'definition' => 'Hit in the interpro HTML output. Each hit belongs to a chado feature. This cvterm represents a hit in the output',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_settings', 
+    'name' => 'analysis_interpro_settings',
     'definition' => 'Settings of an interpro analysis, including output file and run parameters separated by a bar |',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_interproparameters', 
+    'name' => 'analysis_interpro_interproparameters',
     'definition' => 'The parameters used when executing an InterProScan job',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_interprofile', 
+    'name' => 'analysis_interpro_interprofile',
     'definition' => 'Used to hold the name of the XML file containing the InterProScan results',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_parsego', 
+    'name' => 'analysis_interpro_parsego',
     'definition' => 'Indicates whether or not the GO terms should be extracted when parsing the InterProScan XML file',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_parseHTML', 
+    'name' => 'analysis_interpro_parseHTML',
     'definition' => 'Indicates that the input file is in HTML format. This functionality is deprecated and may not work, but is provided for backwards compatability.',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_query_re', 
+    'name' => 'analysis_interpro_query_re',
     'definition' => 'The regular expression for finding the feature name in the query definition line of the InterPro results',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_query_type', 
+    'name' => 'analysis_interpro_query_type',
     'definition' => 'The feature type (e.g. mRNA, polypeptide) of the query input file. This type is used to identify the query feature when multiple features have the same name',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
            ;
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_query_uniquename', 
+    'name' => 'analysis_interpro_query_uniquename',
     'definition' => 'Indicates if the matched name in the query definition line of the blast results is feature uniquename',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
   tripal_insert_cvterm(array(
-    'name' => 'analysis_interpro_output_keywords', 
+    'name' => 'analysis_interpro_output_keywords',
     'definition' => 'Selected keywords for interpro html output which are indexed for search.',
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-           
+
 }
 
 /*******************************************************************************
@@ -231,7 +229,7 @@ function tripal_analysis_interpro_requirements($phase) {
 }
 
 /**
- * 
+ *
  */
 function tripal_analysis_interpro_update_7200() {
   // We cannot use the Tripal API calls in the 7200 update
@@ -320,7 +318,7 @@ function tripal_analysis_interpro_update_7200() {
  * During the Drupal 6.x to 7.x we cannot use Tripal API function calls
  * so we must do database upates using Drupal API functions.  This function
  * simply wraps adding a new database record to the chado.db table
- * 
+ *
  * @param $dbname
  * @param $desc
  * @param $url
@@ -348,7 +346,7 @@ function tripal_analysis_interpro_7x_upgrade_add_db($name, $desc, $url, $urlpref
         'url' => $url,
         'urlprefix' => $urlprefix
       ))
-      ->execute(); 
-  } 
-    
+      ->execute();
+  }
+
 }
