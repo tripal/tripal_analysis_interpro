@@ -23,23 +23,26 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
           $parsego, $query_re, $query_type, $query_uniquename, $job_id, 1);
     }
     else {
+      // Parsing all files in the directory
       $dir_handle = @opendir($interproxmlfile) or die("Unable to open $interproxmlfile");
-      $pattern = $interproxmlfile . "/*.[xX][mM][lL]";
-      $total_files = count(glob($pattern));
-      print "$total_files file(s) to be parsed.\n";
+      $files_to_parse = [];
+      while ($file = readdir($dir_handle)) {
+        if (preg_match("/^.*\.xml/i", $file)) {
+          $files_to_parse[] = $file;
+        }
+      }
 
+      $total_files = count($files_to_parse);
+      $no_file = 0;
       $interval = intval($total_files * 0.01);
       if ($interval == 0) {
         $interval = 1;
       }
-      $no_file = 0;
-
-      // Parsing all files in the directory
-      while ($file = readdir($dir_handle)) {
-        if (preg_match("/^.*\.xml/i", $file)) {
-          tripal_analysis_interpro_parseSingleXMLFile($analysis_id, "$interproxmlfile/$file",
+      print "$total_files file(s) to be parsed.\n";
+      foreach ($files_to_parse as $file) {
+        print "File $no_file of $total_files: $file                       \n";
+        tripal_analysis_interpro_parseSingleXMLFile($analysis_id, "$interproxmlfile/$file",
             $parsego, $query_re, $query_type, $query_uniquename, $job_id, 0, $no_file, $total_files);
-        }
         $no_file ++;
       }
     }
