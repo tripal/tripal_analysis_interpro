@@ -24,7 +24,7 @@ function tripal_analysis_interpro_parseXMLFile($analysis_id, $interproxmlfile,
     }
     else {
       $dir_handle = @opendir($interproxmlfile) or die("Unable to open $interproxmlfile");
-      $pattern = sql_regcase($interproxmlfile . "/*.xml");
+      $pattern = $interproxmlfile . "/*.[xX][mM][lL]";
       $total_files = count(glob($pattern));
       print "$total_files file(s) to be parsed.\n";
 
@@ -63,7 +63,7 @@ function tripal_analysis_interpro_parseSingleXMLFile($analysis_id, $interproxmlf
 
   // Load the XML file
   $xml =  simplexml_load_file($interproxmlfile);
-  if (!$xml) {
+  if ($xml === FALSE) {
     watchdog('tripal_interpro', "Cannot open XML. Please check that it is valid XML.", NULL, WATCHDOG_ERROR);
     return;
   }
