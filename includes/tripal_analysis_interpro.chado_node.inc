@@ -80,6 +80,7 @@ function chado_analysis_interpro_form($node, $form_state) {
 
   // add in the default fields for the analysis
   $form = chado_analysis_form($node, $form_state);
+
   // set the fedaults
   $interprofile = '';
   $interprojob = '';
@@ -98,8 +99,27 @@ function chado_analysis_interpro_form($node, $form_state) {
     $query_type = $analysis->tripal_analysis_interpro->query_type;
     $query_uniquename = $analysis->tripal_analysis_interpro->query_uniquename;
   }
+  // if we are re constructing the form from a failed validation or ajax callback
+  // then use the $form_state['values'] values
+  if (array_key_exists('values', $form_state)) {
+    $interprofile       = $form_state['values']['interprofile'];
+    $interproparameters = $form_state['values']['interproparameters'];
+    $parsego            = $form_state['values']['parsego'];
+    $query_re           = $form_state['values']['query_re'];
+    $query_type         = $form_state['values']['query_type'];
+    $query_uniquename   = $form_state['values']['query_uniquename'];
+  }
+  // if we are re building the form from after submission (from ajax call) then
+  // the values are in the $form_state['input'] array
+  if (array_key_exists('input', $form_state) and !empty($form_state['input'])) {
+    $interprofile       = $form_state['input']['interprofile'];
+    $interproparameters = $form_state['input']['interproparameters'];
+    $parsego            = $form_state['input']['parsego'];
+    $query_re           = $form_state['input']['query_re'];
+    $query_type         = $form_state['input']['query_type'];
+    $query_uniquename   = $form_state['input']['query_uniquename'];
+  }
 
-  $moreSettings ['interpro'] = 'Interpro Settings';
   $form['interpro'] = array(
     '#title' => t('Interpro Settings'),
     '#type' => 'fieldset',
