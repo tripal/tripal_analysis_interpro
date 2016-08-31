@@ -205,9 +205,9 @@ function chado_analysis_interpro_validate($node, &$form, &$form_state) {
 
 
   // check the regular expression to make sure it is valid
-  $result = 0;
-  $code = "\$result = preg_match(\"test\", \"/" . $node->query_re . "/\")";
-  eval($code);
+  set_error_handler(function() {}, E_WARNING);
+  $result = preg_match("/" . $node->query_re . "/", null);
+  restore_error_handler();
   if ($result === FALSE) {
     form_set_error('query_re', 'Invalid regular expression.');
   }
