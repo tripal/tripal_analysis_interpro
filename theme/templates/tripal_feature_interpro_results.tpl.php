@@ -10,7 +10,7 @@ $feature = $variables['node']->feature;
  *     $results[$analysis_id]['format']
  *
  * Because there may be multiple InterProScan analyses for this feature, they
- * are separated in the array by the $analysis_id key.  The deeper array 
+ * are separated in the array by the $analysis_id key.  The deeper array
  * structure is as follows
  *
  *     An arrray containing all of the IPR terms mapped to this feature. Each
@@ -18,7 +18,7 @@ $feature = $variables['node']->feature;
  *     accession, the second is the name and the third is the description
  *       $results[$analysis_id]['iprterms']
  *
- *     A string indicating the XML format from which the original results 
+ *     A string indicating the XML format from which the original results
  *     were obtained. Valid values are XML4 or XML5
  *       $results[$analysis_id]['format']
  *
@@ -64,10 +64,10 @@ $feature = $variables['node']->feature;
 
 if (property_exists($feature, 'tripal_analysis_interpro')) {
   if (property_exists($feature->tripal_analysis_interpro->results, 'xml')) {
-    
+
     // iterate through the results. They are organized by analysis id
     $results = $feature->tripal_analysis_interpro->results->xml;
-    
+
     if(count($results) > 0){
 
       foreach($results as $analysis_id => $details){
@@ -88,17 +88,17 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
 
         // ALIGNMENT SUMMARY
         $headers = array(
-          'IPR Term', 
-          'IPR Description', 
-          'Source', 
-          'Source Term', 
+          'IPR Term',
+          'IPR Description',
+          'Source',
+          'Source Term',
           'Source Description',
           'Alignment'
         );
-        
+
         $rows = array();
         foreach ($iprterms as $ipr_id => $iprterm) {
-          
+
           $matches  = $iprterm['matches'];
           $ipr_name = $iprterm['ipr_name'];
           $ipr_desc = $iprterm['ipr_desc'];
@@ -108,10 +108,10 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
           foreach ($matches as $match) {
             $match_id     = $match['match_id'];
             $match_name   = $match['match_name'];
-            $match_dbname = $match['match_dbname'];           
-          
+            $match_dbname = $match['match_dbname'];
+
             $locations = $match['locations'];
-            $loc_details = '';            
+            $loc_details = '';
             foreach($locations as $location){
               if ($format == 'XML4') {
                 $loc_details .= 'coord: ' . $location['match_start'] . ".." . $location['match_end'];
@@ -132,8 +132,8 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
               //$match_evidence =  $location['match_evidence'];
             }
             // remove the trailing <br>
-            $loc_details = substr($loc_details, 0, -4); 
-            
+            $loc_details = substr($loc_details, 0, -4);
+
             if ($ipr_id == 'noIPR') {
               $ipr_id_link = 'None';
               $ipr_desc = 'No IPR available';
@@ -146,11 +146,11 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
                 $ipr_id_link = l($ipr_id, $ipr_db->urlprefix . $ipr_id, array('attributes' => array('target' => '_blank')));
               }
             }
-            
+
             // the Prosite databases are split into two libraries for InterProScan. But
             // we can just use the PROSITE database for both of them, so rename it here.
             $match_dbname = preg_replace('/(PROSITE)_.*/', '\1', $match_dbname);
-            
+
             // get links for the matching databases
             $match_db = tripal_db_get_db(array('name' => strtoupper($match_dbname)));
             if ($match_db and $match_db->url) {
@@ -171,7 +171,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
             if ($match_db and $match_db->url) {
               $match_dbname = l($match_dbname, $match_db->url, array('attributes' => array('target' => '_blank')));
             }
-            
+
             $rows[] = array(
               $ipr_id_link,
               $ipr_desc,
@@ -213,7 +213,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
   // for backwards compatibility we want to ensure that if any results are stored
   // as HTML that they can still be displayed.  Although Tripal InterPro Analysis
   // v2.0 no longer supports importing of HTML results.
-  if(property_exists($feature->tripal_analysis_interpro->results, 'html') and 
+  if(property_exists($feature->tripal_analysis_interpro->results, 'html') and
      $feature->tripal_analysis_interpro->results->html) {
     $resultsHTML = $feature->tripal_analysis_interpro->results->html;
 
@@ -227,9 +227,9 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
       Analysis Name: $analysis_name
       <br>Date Performed: $date_performed
     "; ?>
-    
-    <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php 
+
+    <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php
     print $resultsHTML;?>
-    </div> <?php 
+    </div> <?php
   }
 }
