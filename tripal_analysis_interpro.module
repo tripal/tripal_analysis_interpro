@@ -11,7 +11,11 @@ require_once "theme/tripal_analysis_interpro.theme.inc";
  */
 function tripal_analysis_interpro_init() {
 
-  // Add javascript and style sheet
+   drupal_add_css("https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.min.css", array('type' => 'external'));
+
+   drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.bundle.js");
+
+   // Add javascript and style sheet
    drupal_add_css(drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/css/tripal_analysis_interpro.css', 'theme');
    drupal_add_js( drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro.js');
 }
