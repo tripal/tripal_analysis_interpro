@@ -1,5 +1,6 @@
 <?php
 $feature = $variables['node']->feature;
+$feature = chado_expand_var($feature,'field','feature.residues');
 
 /* The results from an InterProScan analysis for this feature are avaialble to
  * this template in a array of the following format:
@@ -84,6 +85,19 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
         print "
           Analysis Name: $aname
           <br>Date Performed: $date_performed
+          <div id=\"features_vis-".$analysis->analysis_id."\"></div>
+          <script lang=\"javascript\">
+              var ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
+              '#features_vis-".$analysis->analysis_id."',
+              {
+                  showAxis: true,
+                  showSequence: true,
+                  brushActive: true, //zoom
+                  toolbar:true, //current zoom & mouse position
+                  bubbleHelp:true,
+                  zoomMax:3 //define the maximum range of the zoom
+              });
+          </script>
         ";
 
         // ALIGNMENT SUMMARY
@@ -106,6 +120,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
 
           // iterate through the evidence matches
           foreach ($matches as $match) {
+            $hsp_pos = array();
             $match_id     = $match['match_id'];
             $match_name   = $match['match_name'];
             $match_dbname = $match['match_dbname'];
@@ -130,7 +145,17 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
                 $loc_details .= '<br>';
               }
               //$match_evidence =  $location['match_evidence'];
+
+              $desc = '';
+              if (!empty($location['match_evalue']))
+                $desc = 'Expect = '.$location['match_evalue'];
+              if (!empty($location['match_score']))
+                if (!empty($desc))
+                    $desc .= ' / ';
+                $desc .= 'Score = '.$location['match_score'];
+              $hsp_pos[] = array('x' => intval($location['match_start']), 'y' => intval($location['match_end']), 'description' => $desc);
             }
+
             // remove the trailing <br>
             $loc_details = substr($loc_details, 0, -4);
 
@@ -183,6 +208,20 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
                 'nowrap' => 'nowrap'
               ),
             );
+
+            $viz_name = $ipr_id;
+            if (!empty($match['match_id']))
+                $viz_name = $match['match_id'];
+
+            print "<script lang=\"javascript\">
+                ft".$analysis->analysis_id.".addFeature({
+                   data: ".json_encode($hsp_pos).",
+                   name: \"".$viz_name."\",
+                   className: \"ipr_match\", //can be used for styling
+                   color: \"#0F8292\",
+                   type: \"rect\"
+               });
+            </script>";
           } // end foreach ($matches as $match) {
         } // end foreach ($iprterms as $ipr_id => $iprterm) {
 
@@ -226,6 +265,19 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
     print "
       Analysis Name: $analysis_name
       <br>Date Performed: $date_performed
+      <div id=\"features_vis-".$analysis->analysis_id."\"></div>
+      <script lang=\"javascript\">
+          var ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
+          '#features_vis-".$analysis->analysis_id."',
+          {
+              showAxis: true,
+              showSequence: true,
+              brushActive: true, //zoom
+              toolbar:true, //current zoom & mouse position
+              bubbleHelp:true,
+              zoomMax:3 //define the maximum range of the zoom
+          });
+      </script>
     "; ?>
 
     <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php
