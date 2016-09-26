@@ -87,16 +87,24 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
           <br>Date Performed: $date_performed
           <div id=\"features_vis-".$analysis->analysis_id."\"></div>
           <script lang=\"javascript\">
-              var ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
+              (function($) {
+              // hack to work with multiple jquery versions
+              backup_jquery = window.jQuery;
+              window.jQuery = $;
+              window.$ = $;
+              window.ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
               '#features_vis-".$analysis->analysis_id."',
               {
                   showAxis: true,
                   showSequence: true,
                   brushActive: true, //zoom
                   toolbar:true, //current zoom & mouse position
-                  bubbleHelp:true,
+                  bubbleHelp:false,
                   zoomMax:3 //define the maximum range of the zoom
               });
+              window.jQuery = backup_jquery;
+              window.$ = backup_jquery;
+            })(feature_viewer_jquery);
           </script>
         ";
 
@@ -214,13 +222,21 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
                 $viz_name = $match['match_id'];
 
             print "<script lang=\"javascript\">
-                ft".$analysis->analysis_id.".addFeature({
+              (function($) {
+                  // hack to work with multiple jquery versions
+                  backup_jquery = window.jQuery;
+                  window.jQuery = $;
+                  window.$ = $;
+                  window.ft".$analysis->analysis_id.".addFeature({
                    data: ".json_encode($hsp_pos).",
                    name: \"".$viz_name."\",
                    className: \"ipr_match\", //can be used for styling
                    color: \"#0F8292\",
                    type: \"rect\"
                });
+               window.jQuery = backup_jquery;
+               window.$ = backup_jquery;
+             })(feature_viewer_jquery);
             </script>";
           } // end foreach ($matches as $match) {
         } // end foreach ($iprterms as $ipr_id => $iprterm) {
@@ -267,18 +283,26 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
       <br>Date Performed: $date_performed
       <div id=\"features_vis-".$analysis->analysis_id."\"></div>
       <script lang=\"javascript\">
-          var ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
+          (function($) {
+          // hack to work with multiple jquery versions
+          backup_jquery = window.jQuery;
+          window.jQuery = $;
+          window.$ = $;
+          window.ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
           '#features_vis-".$analysis->analysis_id."',
           {
               showAxis: true,
               showSequence: true,
               brushActive: true, //zoom
               toolbar:true, //current zoom & mouse position
-              bubbleHelp:true,
+              bubbleHelp:false,
               zoomMax:3 //define the maximum range of the zoom
           });
+          window.jQuery = backup_jquery;
+          window.$ = backup_jquery;
+        })(feature_viewer_jquery);
       </script>
-    "; ?>
+    ";?>
 
     <div class="tripal_feature-interpro_results_subtitle">Summary of Annotated IPR terms</div> <?php
     print $resultsHTML;?>
