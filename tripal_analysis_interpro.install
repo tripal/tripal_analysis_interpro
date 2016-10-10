@@ -15,6 +15,8 @@ function tripal_analysis_interpro_install() {
 
    // Add the CV terms needed for this module.
    tripal_analysis_interpro_add_cvterms();
+
+   tripal_analysis_interpro_add_dbs();
 }
 
 /*******************************************************************************
@@ -41,89 +43,103 @@ function tripal_analysis_interpro_uninstall() {
  * can be linked to their appropriate database
  */
 function tripal_analysis_interpro_add_dbs() {
-  tripal_db_add_db(
-    'INTERPRO',
-    'InterPro provides functional analysis of proteins by classifying them into families and predicting domains and important sites. It combines protein signatures from a number of member databases into a single searchable resource.',
-    'http://www.ebi.ac.uk/interpro/',
-    'http://www.ebi.ac.uk/interpro/entry/'
+  tripal_insert_db( array(
+        'name' => 'INTERPRO',
+        'description' => 'InterPro provides functional analysis of proteins by classifying them into families and predicting domains and important sites. It combines protein signatures from a number of member databases into a single searchable resource.',
+        'url' => 'http://www.ebi.ac.uk/interpro/',
+        'urlprefix' => 'http://www.ebi.ac.uk/interpro/entry/'
+    )
   );
-  tripal_db_add_db(
-    'PROSITE',
-    'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
-    'http://prosite.expasy.org/',
-    'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
+  tripal_insert_db( array(
+        'name' => 'PROSITE',
+        'description' => 'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
+        'url' => 'http://prosite.expasy.org/',
+        'urlprefix' => 'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
+    )
   );
-  tripal_db_add_db(
-    'PROSITE_PROFILES',
-    'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
-    'http://prosite.expasy.org/',
-    'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
+  tripal_insert_db( array(
+        'name' => 'PROSITE_PROFILES',
+        'description' => 'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
+        'url' => 'http://prosite.expasy.org/',
+        'urlprefix' => 'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
+    )
   );
-  tripal_db_add_db(
-    'PROSITE_PATTERNS',
-    'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
-    'http://prosite.expasy.org/',
-    'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
+  tripal_insert_db( array(
+        'name' => 'PROSITE_PATTERNS',
+        'description' => 'PROSITE is a database of protein families and domains. It consists of biologically significant sites, patterns and profiles that help to reliably identify to which known protein family a new sequence belongs. ',
+        'url' => 'http://prosite.expasy.org/',
+        'urlprefix' => 'http://prosite.expasy.org/cgi-bin/prosite/prosite-search-ac?'
+    )
   );
-  tripal_db_add_db(
-    'HAMAP',
-    'HAMAP stands for High-quality Automated and Manual Annotation of Proteins. HAMAP profiles are manually created by expert curators. They identify proteins that are part of well-conserved proteins families or subfamilies. ',
-    'http://hamap.expasy.org/',
-    'http://hamap.expasy.org/unirule/'
+  tripal_insert_db( array(
+        'name' => 'HAMAP',
+        'description' => 'HAMAP stands for High-quality Automated and Manual Annotation of Proteins. HAMAP profiles are manually created by expert curators. They identify proteins that are part of well-conserved proteins families or subfamilies. ',
+        'url' => 'http://hamap.expasy.org/',
+        'urlprefix' => 'http://hamap.expasy.org/unirule/'
+    )
   );
-  tripal_db_add_db(
-    'PFAM',
-    'The Pfam database is a large collection of protein families, each represented by multiple sequence alignments and hidden Markov models (HMMs).',
-    'http://pfam.sanger.ac.uk/',
-    'http://pfam.sanger.ac.uk/family/'
+  tripal_insert_db( array(
+        'name' => 'PFAM',
+        'description' => 'The Pfam database is a large collection of protein families, each represented by multiple sequence alignments and hidden Markov models (HMMs).',
+        'url' => 'http://pfam.xfam.org/',
+        'urlprefix' => 'http://pfam.xfam.org/family/'
+    )
   );
-  tripal_db_add_db(
-    'PRINTS',
-    'PRINTS is a compendium of protein fingerprints. A fingerprint is a group of conserved motifs used to characterise a protein family or domain.',
-    'http://www.bioinf.manchester.ac.uk/dbbrowser/PRINTS/',
-    ''
+  tripal_insert_db( array(
+        'name' => 'PRINTS',
+        'description' => 'PRINTS is a compendium of protein fingerprints. A fingerprint is a group of conserved motifs used to characterise a protein family or domain.',
+        'url' => 'http://www.bioinf.manchester.ac.uk/dbbrowser/PRINTS/',
+        'urlprefix' => ''
+    )
   );
-  tripal_db_add_db(
-    'PRODOM',
-    'ProDom protein domain database consists of an automatic compilation of homologous domains. Current versions of ProDom are built using a novel procedure based on recursive PSI-BLAST searches.',
-    'http://prodom.prabi.fr/',
-    'http://prodom.prabi.fr/prodom/current/cgi-bin/request.pl?question=DBEN&query='
+  tripal_insert_db( array(
+        'name' => 'PRODOM',
+        'description' => 'ProDom protein domain database consists of an automatic compilation of homologous domains. Current versions of ProDom are built using a novel procedure based on recursive PSI-BLAST searches.',
+        'url' => 'http://prodom.prabi.fr/',
+        'urlprefix' => 'http://prodom.prabi.fr/prodom/current/cgi-bin/request.pl?question=DBEN&query='
+    )
   );
-  tripal_db_add_db(
-    'SMART',
-    'SMART (a Simple Modular Architecture Research Tool) allows the identification and annotation of genetically mobile domains and the analysis of domain architectures.',
-    'http://smart.embl-heidelberg.de/',
-    'http://smart.embl-heidelberg.de/smart/do_annotation.pl?ACC='
+  tripal_insert_db( array(
+        'name' => 'SMART',
+        'description' => 'SMART (a Simple Modular Architecture Research Tool) allows the identification and annotation of genetically mobile domains and the analysis of domain architectures.',
+        'url' => 'http://smart.embl-heidelberg.de/',
+        'urlprefix' => 'http://smart.embl-heidelberg.de/smart/do_annotation.pl?ACC='
+    )
   );
-  tripal_db_add_db(
-    'TIGRFAM',
-    'TIGRFAMs is a collection of protein families, featuring curated multiple sequence alignments, hidden Markov models (HMMs) and annotation, which provides a tool for identifying functionally related proteins based on sequence homology.',
-    'http://www.jcvi.org/cgi-bin/tigrfams/index.cgi',
-    'http://www.jcvi.org/cgi-bin/tigrfams/HmmReportPage.cgi?acc='
+  tripal_insert_db( array(
+        'name' => 'TIGRFAM',
+        'description' => 'TIGRFAMs is a collection of protein families, featuring curated multiple sequence alignments, hidden Markov models (HMMs) and annotation, which provides a tool for identifying functionally related proteins based on sequence homology.',
+        'url' => 'http://www.jcvi.org/cgi-bin/tigrfams/index.cgi',
+        'urlprefix' => 'http://www.jcvi.org/cgi-bin/tigrfams/HmmReportPage.cgi?acc='
+    )
   );
-  tripal_db_add_db(
-    'PIRSF',
-    'PIRSF protein classification system is a network with multiple levels of sequence diversity from superfamilies to subfamilies that reflects the evolutionary relationship of full-length proteins and domains.',
-    'http://pir.georgetown.edu/pirwww/dbinfo/pirsf.shtml',
-    'http://pir.georgetown.edu/cgi-bin/ipcSF?id='
+  tripal_insert_db( array(
+        'name' => 'PIRSF',
+        'description' => 'PIRSF protein classification system is a network with multiple levels of sequence diversity from superfamilies to subfamilies that reflects the evolutionary relationship of full-length proteins and domains.',
+        'url' => 'http://pir.georgetown.edu/pirwww/dbinfo/pirsf.shtml',
+        'urlprefix' => 'http://pir.georgetown.edu/cgi-bin/ipcSF?id='
+    )
   );
-  tripal_db_add_db(
-    'SUPERFAMILY',
-    'SUPERFAMILY is a library of profile hidden Markov models that represent all proteins of known structure. The library is based on the SCOP classification of proteins.',
-    'http://supfam.cs.bris.ac.uk/SUPERFAMILY/',
-    'http://supfam.org/SUPERFAMILY/cgi-bin/scop.cgi?sunid='
+  tripal_insert_db( array(
+        'name' => 'SUPERFAMILY',
+        'description' => 'SUPERFAMILY is a library of profile hidden Markov models that represent all proteins of known structure. The library is based on the SCOP classification of proteins.',
+        'url' => 'http://supfam.cs.bris.ac.uk/SUPERFAMILY/',
+        'urlprefix' => 'http://supfam.org/SUPERFAMILY/cgi-bin/scop.cgi?sunid='
+    )
   );
-  tripal_db_add_db(
-    'GENE3D',
-    'CATH-Gene3D database describes protein families and domain architectures in complete genomes. Protein families are formed using a Markov clustering algorithm, followed by multi-linkage clustering according to sequence identity. ',
-    'http://www.cathdb.info/',
-    'http://www.cathdb.info/version/latest/superfamily/'
+  tripal_insert_db( array(
+        'name' => 'GENE3D',
+        'description' => 'CATH-Gene3D database describes protein families and domain architectures in complete genomes. Protein families are formed using a Markov clustering algorithm, followed by multi-linkage clustering according to sequence identity. ',
+        'url' => 'http://www.cathdb.info/',
+        'urlprefix' => 'http://www.cathdb.info/version/latest/superfamily/'
+    )
   );
-  tripal_db_add_db(
-    'PANTHER',
-    'PANTHER is a large collection of protein families that have been subdivided into functionally related subfamilies, using human expertise.',
-    'http://www.pantherdb.org/',
-    'http://www.pantherdb.org/panther/family.do?clsAccession='
+  tripal_insert_db( array(
+        'name' => 'PANTHER',
+        'description' => 'PANTHER is a large collection of protein families that have been subdivided into functionally related subfamilies, using human expertise.',
+        'url' => 'http://www.pantherdb.org/',
+        'urlprefix' => 'http://www.pantherdb.org/panther/family.do?clsAccession='
+    )
   );
 }
 /**
