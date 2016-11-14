@@ -3,22 +3,65 @@
  * Prepare interpro result for the feature shown on the page
  */
 function tripal_analysis_interpro_preprocess_tripal_feature_interpro_results(&$variables) {
-  $feature = $variables['node']->feature;
+    $feature = $variables['node']->feature;
 
-  // make sure the necessary property elements exist
-  if (!property_exists($feature, 'tripal_analysis_interpro')) {
-    $feature->tripal_analysis_interpro = new stdClass;
-  }
-  if (!property_exists($feature->tripal_analysis_interpro, 'results')) {
-    $feature->tripal_analysis_interpro->results = new stdClass;
-  }
-  
-  $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
-  $feature->tripal_analysis_interpro->results->xml = $xml_results;
-  
-  // we don't know how many analysis are the old style HTML version and how many are the newer
-  // XML format.  So, to be backwards compatible we should get both.
-  $feature->tripal_analysis_interpro->results->html = tripal_get_interpro_HTML_results($feature->feature_id);
+    // make sure the necessary property elements exist
+    if (!property_exists($feature, 'tripal_analysis_interpro')) {
+        $feature->tripal_analysis_interpro = new stdClass;
+    }
+    if (!property_exists($feature->tripal_analysis_interpro, 'results')) {
+        $feature->tripal_analysis_interpro->results = new stdClass;
+    }
+
+    $xml_results = tripal_get_interpro_XML_results($feature->feature_id);
+    $feature->tripal_analysis_interpro->results->xml = $xml_results;
+
+    // we don't know how many analysis are the old style HTML version and how many are the newer
+    // XML format.  So, to be backwards compatible we should get both.
+    $feature->tripal_analysis_interpro->results->html = tripal_get_interpro_HTML_results($feature->feature_id);
+
+    drupal_add_css("https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.min.css", array('type' => 'external'));
+
+    // Hack to ensure that jquery 3.1.0 is loaded just before calling noconflict
+    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js", array(
+      'type' => 'external',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 100,
+    ));
+    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js", array(
+      'type' => 'external',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 200,
+    ));
+    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js", array(
+      'type' => 'external',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 300,
+    ));
+    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.min.js", array(
+      'type' => 'external',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 400,
+    ));
+    drupal_add_js("if (typeof feature_viewer_jquery == 'undefined') {var feature_viewer_jquery = jQuery.noConflict(true);}", array(
+      'type' => 'inline',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 1000,
+    ));
+
+    // Add javascript and style sheet
+    drupal_add_css(drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/css/tripal_analysis_interpro.css', 'theme');
+    drupal_add_js( drupal_get_path('module', 'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro.js');
 }
 
 /**
@@ -75,20 +118,20 @@ function tripal_get_interpro_XML_results($feature_id) {
         $results[$analysis_id]['iprterms'][$ipr_id]['ipr_desc'] = $iprterm['ipr_desc'];
         $results[$analysis_id]['iprterms'][$ipr_id]['ipr_name'] = $iprterm['ipr_name'];
         $results[$analysis_id]['iprterms'][$ipr_id]['ipr_type'] = $iprterm['ipr_type'];
-        
-        
+
+
         // merge the matches
         if (!array_key_exists('matches',  $results[$analysis_id]['iprterms'][$ipr_id])) {
           $results[$analysis_id]['iprterms'][$ipr_id]['matches'] = array();
         }
         $results[$analysis_id]['iprterms'][$ipr_id]['matches'] = array_merge($results[$analysis_id]['iprterms'][$ipr_id]['matches'], $iprterm['matches']);
-        
+
         // merge the goterms
         if (!array_key_exists('goterms',  $results[$analysis_id]['iprterms'][$ipr_id])) {
           $results[$analysis_id]['iprterms'][$ipr_id]['goterms'] = array();
         }
         $results[$analysis_id]['iprterms'][$ipr_id]['goterms'] = array_merge($results[$analysis_id]['iprterms'][$ipr_id]['goterms'], $iprterm['goterms']);
-        
+
       }
       // merge the go terms
       foreach ($terms['goterms'] as $go_id => $goterm) {
@@ -108,11 +151,11 @@ function tripal_get_interpro_XML_results($feature_id) {
  */
 function tripal_get_interpro_HTML_results($feature_id) {
   $content = '';
-  
+
   // Get cvterm_id for 'analysis_interpro_output_hit' which is required
   // for inserting into the analysisfeatureprop table
   $sql = "
-    SELECT CVT.cvterm_id 
+    SELECT CVT.cvterm_id
     FROM {cvterm} CVT
       INNER JOIN {cv} ON cv.cv_id = CVT.cv_id
     WHERE CVT.name = 'analysis_interpro_output_hit' AND CV.name = 'tripal'";
@@ -147,10 +190,10 @@ function tripal_get_interpro_HTML_results($feature_id) {
       ";
       $ana_details = chado_query($sql, array(':analysis_id' => $ana->aid))->fetchObject();
       // Find node id for the analysis
-       
+
       $ana_nid = db_query("SELECT nid FROM {chado_analysis} WHERE analysis_id = :analysis_id", array(':analysis_id' => $ana->aid))->fetchField();
       $ana_url = url("node/". $ana_nid);
-       
+
 
       // Show content
       $content .= "<strong>Analysis Date:</strong> $ana_details->time (<a href=$ana_url>$ana_details->name</a>)";
