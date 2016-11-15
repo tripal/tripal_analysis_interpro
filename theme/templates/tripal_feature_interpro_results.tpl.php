@@ -173,7 +173,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
             }
             else {
               // we want to use the URL for the database
-              $ipr_db = tripal_db_get_db(array('name' => 'INTERPRO'));
+              $ipr_db = tripal_get_db(array('name' => 'INTERPRO'));
               $ipr_id_link = $ipr_id;
               if ($ipr_db and $ipr_db->urlprefix) {
                 $ipr_id_link = l($ipr_id, $ipr_db->urlprefix . $ipr_id, array('attributes' => array('target' => '_blank')));
@@ -185,7 +185,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
             $match_dbname = preg_replace('/(PROSITE)_.*/', '\1', $match_dbname);
 
             // get links for the matching databases
-            $match_db = tripal_db_get_db(array('name' => strtoupper($match_dbname)));
+            $match_db = tripal_get_db(array('name' => strtoupper($match_dbname)));
             if ($match_db and $match_db->url) {
               // some databases need a prefix removed
               if ($match_dbname == "GENE3D") {
