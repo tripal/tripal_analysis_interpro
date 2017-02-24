@@ -72,6 +72,7 @@ if (property_exists($feature, 'tripal_analysis_interpro')) {
     if(count($results) > 0){
 
       foreach($results as $analysis_id => $details){
+        if(!isset($details['iprterms'])) continue;
         $analysis   = $details['analysis'];
         $iprterms   = $details['iprterms'];
         $format     = $details['format'];
