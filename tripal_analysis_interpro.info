@@ -1,7 +1,7 @@
 name = Tripal Interpro
 description = An analysis sub-module for adding, editing, and displaying InterProScan analysis results.
 core = 7.x
-version = 7.x-2.1-beta2
+version = 7.x-2.1
 project = tripal_analysis_interpro
 package = Tripal Extensions
 dependencies[] = tripal_core
