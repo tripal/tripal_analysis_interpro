@@ -224,6 +224,13 @@ function tripal_analysis_interpro_add_cvterms() {
     'db_name' => 'tripal',
   ));
 
+  $term = tripal_insert_cvterm(array(
+    'id' => 'format:1341',
+    'name' => 'InterPro hits format',
+    'cv_name' => 'EDAM',
+    'definition' => 'Results format for searches of the InterPro database.',
+  ));
+  tripal_associate_chado_semweb_term('feature', 'seqlen', $term);
 }
 
 /*******************************************************************************
@@ -367,4 +374,23 @@ function tripal_analysis_interpro_7x_upgrade_add_db($name, $desc, $url, $urlpref
       ->execute();
   }
 
+}
+
+/**
+ * Adds the Tripal v3 vocabulary term for interpro results.
+ */
+function tripal_analysis_interpro_update_7300() {
+  try {
+    $term = tripal_insert_cvterm(array(
+      'id' => 'format:1341',
+      'name' => 'InterPro hits format',
+      'cv_name' => 'EDAM',
+      'definition' => 'Results format for searches of the InterPro database.',
+    ));
+    tripal_associate_chado_semweb_term('feature', 'seqlen', $term);
+  }
+  catch (\PDOException $e) {
+    $error = $e->getMessage();
+    throw new DrupalUpdateException('Failed to update terms: '. $error);
+  }
 }

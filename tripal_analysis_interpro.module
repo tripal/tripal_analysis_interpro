@@ -2,6 +2,7 @@
 require_once "includes/tripal_analysis_interpro.chado_node.inc";
 require_once "includes/tripal_analysis_interpro.xml_parser.inc";
 require_once "includes/tripal_analysis_interpro.admin.inc";
+require_once "includes/tripal_analysis_interpro.fields.inc";
 
 require_once "theme/tripal_analysis_interpro.theme.inc";
 
