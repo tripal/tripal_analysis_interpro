@@ -1,9 +1,8 @@
 <?php
 require_once "api/tripal_analysis_interpro.api.inc";
 
-require_once "includes/tripal_analysis_interpro.chado_node.inc";
 require_once "includes/tripal_analysis_interpro.xml_parser.inc";
-require_once "includes/tripal_analysis_interpro.admin.inc";
+//require_once "includes/tripal_analysis_interpro.admin.inc";
 require_once "includes/tripal_analysis_interpro.fields.inc";
 
 require_once "theme/tripal_analysis_interpro.theme.inc";
@@ -12,6 +11,7 @@ require_once "theme/tripal_analysis_interpro.theme.inc";
  * Implements hook_menu().
  */
 function tripal_analysis_interpro_menu() {
+  /*  
   $items['admin/tripal/extension/tripal_interpro_analysis'] = array(
     'title' => 'InterPro Analyses',
     'description' => 'Administrative pages for the Tripal InterPro Analysis module.',
@@ -38,6 +38,7 @@ function tripal_analysis_interpro_menu() {
     'weight' => 2
   );
   return $items;
+  */
 }
 
 /**
