@@ -270,9 +270,12 @@ class format__interpro_hits_format_formatter extends ChadoFieldFormatter {
       $content = '<div class="tripal_feature-data-block-desc tripal-data-block-desc">The following InterPro results are available for this feature:</div> ';
       $content .= '<a name="interpro-results-top"></a>';
       $content .= $list_items;
+      if (isset($element[0]['#markup'])) {
+        $content .= $element[0]['#markup'];
+      }
       $element[0] = array(
         '#type' => 'markup',
-        '#markup' => $content . $element[0]['#markup'],
+        '#markup' => $content,
       );
     }
   }
