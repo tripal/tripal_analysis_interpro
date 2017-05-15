@@ -55,16 +55,18 @@ class format__interpro_hits_format extends ChadoField {
 
     // Get the list of results.
     $interpro_hits_format = tripal_get_interpro_XML_results($record->feature_id);
-    foreach ($interpro_hits_format as $delta => $results) {
-      $xml = '';
-      if (isset($results->xml)) {
-        $xml = $results->xml;
-        unset($results->xml);
+    if (is_array($interpro_hits_format)) {
+      foreach ($interpro_hits_format as $delta => $results) {
+        $xml = '';
+        if (isset($results->xml)) {
+          $xml = $results->xml;
+          unset($results->xml);
+        }
+        $entity->{$field_name}['und'][$delta] = array(
+          'value' => $xml,
+          'parsed' => $results
+        );
       }
-      $entity->{$field_name}['und'][$delta] = array(
-        'value' => $xml,
-        'parsed' => $results
-      );
     }
   }
 }
