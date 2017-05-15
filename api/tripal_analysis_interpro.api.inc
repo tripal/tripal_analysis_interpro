@@ -42,7 +42,9 @@ function tripal_get_interpro_XML_results($feature_id) {
 
       // parse the XML and add it to the array of results to be returned
       $interpro_xml = $afeatureprop->value;
-      $terms = tripal_analysis_interpro_parse_feature_XML($interpro_xml, $feature_id);
+      module_load_include('inc', 'tripal_analysis_interpro', 'includes/TripalImporter/InterProImporter');
+      $importer = new InterProImporter();
+      $terms = $importer->parseFeatureXML($interpro_xml, $feature_id);
 
       // the terms array will be an array of terms with their matches
       // but because there may be multiple analysisfeatureprops for a single
