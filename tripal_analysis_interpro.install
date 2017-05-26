@@ -17,6 +17,8 @@ function tripal_analysis_interpro_install() {
    tripal_analysis_interpro_add_cvterms();
 
    tripal_analysis_interpro_add_dbs();
+   
+   tripal_analysis_interpro_create_entity_type();
 }
 
 /*******************************************************************************
@@ -223,14 +225,6 @@ function tripal_analysis_interpro_add_cvterms() {
     'cv_name' => 'tripal',
     'db_name' => 'tripal',
   ));
-
-  $term = tripal_insert_cvterm(array(
-    'id' => 'format:1341',
-    'name' => 'InterPro hits format',
-    'cv_name' => 'EDAM',
-    'definition' => 'Results format for searches of the InterPro database.',
-  ));
-  tripal_associate_chado_semweb_term('feature', 'seqlen', $term);
 }
 
 /*******************************************************************************
@@ -251,6 +245,38 @@ function tripal_analysis_interpro_requirements($phase) {
     }
   }
   return $requirements;
+}
+
+/**
+ * Create Analysis Interpro Entity Type
+ */
+function tripal_analysis_interpro_create_entity_type () {
+  $term = tripal_insert_cvterm(array(
+    'id' => 'local:interpro_results',
+    'name' => 'InterPro results',
+    'cv_name' => 'local',
+    'definition' => 'Results for InterPro analysis.',
+  ));
+  
+  $error = '';
+  $args = array(
+    'vocabulary' => 'local',
+    'accession' => 'interpro_results',
+    'term_name' => 'InterPro results',
+    'storage_args' => array(
+      'data_table' => 'analysis',
+      'type_linker_table' => 'analysisprop',
+      'type_column' => 'type_id',
+      'type_value' => 'interpro_analysis'
+    )
+  );
+  $term = tripal_load_term_entity(array('vocabulary' => 'local', 'accession' => 'interpro_results'));
+  $bundle = tripal_load_bundle_entity(array('term_id' => $term->id));
+  if (!$term or !$bundle) {
+    if (!tripal_create_bundle($args, $error)) {
+      throw new Exception($error['!message']);
+    }
+  }
 }
 
 /**
@@ -377,20 +403,14 @@ function tripal_analysis_interpro_7x_upgrade_add_db($name, $desc, $url, $urlpref
 }
 
 /**
- * Adds the Tripal v3 vocabulary term for interpro results.
+ * Create Interpro results entity type
  */
-function tripal_analysis_interpro_update_7300() {
+function tripal_analysis_interpro_update_7303() {
   try {
-    $term = tripal_insert_cvterm(array(
-      'id' => 'format:1341',
-      'name' => 'InterPro hits format',
-      'cv_name' => 'EDAM',
-      'definition' => 'Results format for searches of the InterPro database.',
-    ));
-    tripal_associate_chado_semweb_term('feature', 'seqlen', $term);
+    tripal_analysis_interpro_create_entity_type();
   }
   catch (\PDOException $e) {
     $error = $e->getMessage();
-    throw new DrupalUpdateException('Failed to update terms: '. $error);
+    throw new DrupalUpdateException('Failed to create entity type [Interpro results]: '. $error);
   }
 }

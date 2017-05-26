@@ -13,8 +13,8 @@ function tripal_analysis_interpro_bundle_fields_info($entity_type, $bundle) {
   $vocab = $term->vocab;
 
   if ($vocab->vocabulary == 'SO') {
-    $field_name = 'format__interpro_hits_format';
-    $field_type = 'format__interpro_hits_format';
+    $field_name = 'local__interpro_results';
+    $field_type = 'local__interpro_results';
     $info[$field_name] = array(
       'field_name' => $field_name,
       'type' => $field_type,
@@ -41,12 +41,12 @@ function tripal_analysis_interpro_bundle_instances_info($entity_type, $bundle) {
   $vocab = $term->vocab;
 
   if ($vocab->vocabulary == 'SO') {
-    $field_name = 'format__interpro_hits_format';
+    $field_name = 'local__interpro_results';
     $info[$field_name] = array(
       'field_name' => $field_name,
       'entity_type' => $entity_type,
       'bundle' => $bundle->name,
-      'label' => 'InterPro hits format',
+      'label' => 'InterPro results',
       'description' => 'Results format for searches of the InterPro database.',
       'required' => FALSE,
       'settings' => array(
@@ -56,12 +56,12 @@ function tripal_analysis_interpro_bundle_instances_info($entity_type, $bundle) {
         'base_table' => 'feature',
       ),
       'widget' => array(
-        'type' => 'format__interpro_hits_format_widget',
+        'type' => 'local__interpro_results_widget',
       ),
       'display' => array(
         'default' => array(
           'label' => 'inline',
-          'type' => 'format__interpro_hits_format_formatter',
+          'type' => 'local__interpro_results_formatter',
         ),
       ),
     );

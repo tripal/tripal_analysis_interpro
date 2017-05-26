@@ -1,12 +1,12 @@
 <?php
 
-class format__interpro_hits_format extends ChadoField {
+class local__interpro_results extends ChadoField {
 
   // The default lable for this field.
-  public static $default_label = 'InterPro hits format';
+  public static $default_label = 'InterPro results';
 
   // The default description for this field.
-  public static $description = 'Results format for searches of the InterPro database.';
+  public static $description = 'Results for InterPro analysis.';
 
   // Provide a list of instance specific settings. These can be access within
   // the instanceSettingsForm.  When the instanceSettingsForm is submitted
@@ -17,11 +17,11 @@ class format__interpro_hits_format extends ChadoField {
   // required for all TripalFields.
   public static $default_instance_settings  = array(
     // The short name for the vocabulary (e.g. shcema, SO, GO, PATO, etc.).
-    'term_vocabulary' => 'format',
+    'term_vocabulary' => 'local',
     // The name of the term.
-    'term_name' => 'InterPro hits format',
+    'term_name' => 'InterPro results',
     // The unique ID (i.e. accession) of the term.
-    'term_accession' => '1341',
+    'term_accession' => 'interpro_results',
     // Set to TRUE if the site admin is allowed to change the term
     // type. This will create form elements when editing the field instance
     // to allow the site admin to change the term settings above.
@@ -29,10 +29,10 @@ class format__interpro_hits_format extends ChadoField {
   );
 
   // The default widget for this field.
-  public static $default_widget = 'format__interpro_hits_format_widget';
+  public static $default_widget = 'local__interpro_results_widget';
 
   // The default formatter for this field.
-  public static $default_formatter = 'format__interpro_hits_format_formatter';
+  public static $default_formatter = 'local__interpro_results_formatter';
 
   /**
    * @see TripalField::load()
@@ -54,9 +54,9 @@ class format__interpro_hits_format extends ChadoField {
     );
 
     // Get the list of results.
-    $interpro_hits_format = tripal_get_interpro_XML_results($record->feature_id);
-    if (is_array($interpro_hits_format)) {
-      foreach ($interpro_hits_format as $delta => $results) {
+    $interpro_results = tripal_get_interpro_XML_results($record->feature_id);
+    if (is_array($interpro_results)) {
+      foreach ($interpro_results as $delta => $results) {
         $xml = '';
         if (isset($results->xml)) {
           $xml = $results->xml;

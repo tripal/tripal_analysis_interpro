@@ -1,12 +1,12 @@
 <?php
 
-class format__interpro_hits_format_widget extends ChadoFieldWidget {
+class local__interpro_results_widget extends ChadoFieldWidget {
 
   // The default lable for this field.
-  public static $default_label = 'InterPro hits format';
+  public static $default_label = 'InterPro results';
 
   // The list of field types for which this formatter is appropriate.
-  public static $field_types = array('format__interpro_hits_format');
+  public static $field_types = array('local__interpro_results');
 
 
   /**
