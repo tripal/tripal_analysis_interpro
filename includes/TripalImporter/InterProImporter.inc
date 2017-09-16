@@ -127,7 +127,7 @@ class InterProImporter extends TripalImporter {
   public function run() {
     $arguments = $this->arguments['run_args'];
     $analysis_id = $arguments['analysis_id'];
-    $interproxmlfile = trim($this->arguments['file']['file_path']);
+    $interproxmlfile = trim($this->arguments['files'][0]['file_path']);
     $parsego = $arguments['parsego'];
     $query_re = $arguments['query_re'];
     $query_type = $arguments['query_type'];
@@ -143,13 +143,13 @@ class InterProImporter extends TripalImporter {
    */
   function parseXMLFile($analysis_id, $interproxmlfile,
       $parsego, $query_re, $query_type, $query_uniquename) {
-        
+
         $transaction = db_transaction();
         try {
-          
+
           // clear out the anslysisfeature table for this analysis before getting started
           chado_delete_record('analysisfeature', array('analysis_id' => $analysis_id));
-          
+
           // If user input a file(e.g. interpro.xml)
           if (is_file($interproxmlfile)) {
             $this->parseSingleXMLFile($analysis_id, $interproxmlfile,
@@ -164,7 +164,7 @@ class InterProImporter extends TripalImporter {
                 $files_to_parse[] = $file;
               }
             }
-            
+
             $total_files = count($files_to_parse);
             $no_file = 0;
             $this->setTotalItems($total_files);
@@ -190,16 +190,16 @@ class InterProImporter extends TripalImporter {
   function parseSingleXMLFile($analysis_id, $interproxmlfile,
       $parsego, $query_re, $query_type, $query_uniquename, $uptate_status = 1,
       $file_no = 0, $total_files = 1) {
-        
+
         $filename = preg_replace('/^.*\/(.*)$/' , '$1', $interproxmlfile);
-        
+
         // Load the XML file
         $xml =  simplexml_load_file($interproxmlfile);
         if ($xml === FALSE) {
           watchdog('tripal_interpro', "Cannot open XML. Please check that it is valid XML.", NULL, WATCHDOG_ERROR);
           return;
         }
-        
+
         // If starts with 'protein-matches' or 'nucleotide-sequence-matches' then this is InterPro v5 XML
         if (preg_match('/^protein-matches/', $xml->getname())) {
           $this->parseXML5($xml, $analysis_id, $filename,
@@ -245,7 +245,7 @@ class InterProImporter extends TripalImporter {
   function parseXML5($xml, $analysis_id, $filename,
       $parsego, $query_re, $query_type, $query_uniquename, $uptate_status,
       $file_no, $total_files) {
-        
+
         // Count the number of sequences to be processed
         $no_iterations = 0;
         foreach ($xml as $entity) {
@@ -253,19 +253,19 @@ class InterProImporter extends TripalImporter {
         }
         $this->setTotalItems($no_iterations);
         $idx_iterations = 0;
-        
+
         // Processed each nucelotide sequence entry
         foreach ($xml as $entity) {
-          
+
           // Set job status
           $idx_iterations ++;
           $this->setItemsHandled($idx_iterations);
-          
+
           // get details about this sequence
           $children = $entity->children();
           foreach ($children as $child) {
             $childname = $child->getname();
-            
+
             // the <xref> tag holds the sequence name and description.  There could
             // be multiple sequences that have the same protein and hence the same
             // matches. So, for each one in the file, we want to re-parse the matches
@@ -273,28 +273,28 @@ class InterProImporter extends TripalImporter {
               $attrs   = $child->attributes();
               $seqid   = (string) $attrs['id'];
               $seqname = (string) $attrs['name'];
-              
+
               // match the name of the feature in the XML file to a feature in Chado
               $feature_id = $this->matchFeature($seqid, $seqname,
                   $query_re, $query_uniquename, $query_type);
               if (!$feature_id) {
                 continue;
               }
-              
+
               // create an entry in the analysisfeature table and add the XML for this feature
               // to the analysisfeatureprop table
               $analysisfeature_id = $this->addAnalysisFeature($feature_id, $analysis_id, $entity);
               if (!$analysisfeature_id) {
                 continue;
               }
-              
+
               // parse the XML
               $ipr_array = $this->parseFeatureXML($entity->asXML(), $feature_id);
-              
+
               // add in the IPR terms
               $iprterms = $ipr_array['iprterms'];
               $this->loadIprterms($iprterms, $feature_id, $analysisfeature_id);
-              
+
               // get the DB id for the GO database
               $parsego = chado_get_property(
                   array('table' => 'analysis', 'id' => $analysis_id),
@@ -312,12 +312,12 @@ class InterProImporter extends TripalImporter {
           } // end foreach ($children as $child) {
         } // end foreach ($xml as $entity)
   }
-  
+
   /**
    *
    */
   function addAnalysisFeature($feature_id, $analysis_id, $xml_obj) {
-    
+
     // Get cvterm_id for 'analysis_interpro_xmloutput_hits' which is required
     // for inserting into the analysisfeatureprop table
     $sql = "
@@ -330,7 +330,7 @@ class InterProImporter extends TripalImporter {
       CV.name = 'tripal'
   ";
     $type_id = chado_query($sql)->fetchField();
-    
+
     // Insert into analysisfeature table only if it doesn't already exist
     $values = array('feature_id' => $feature_id, 'analysis_id' => $analysis_id);
     $analysisfeature = chado_select_record('analysisfeature', array('*'), $values);
@@ -341,7 +341,7 @@ class InterProImporter extends TripalImporter {
     else {
       $analysisfeature_id = $analysisfeature[0]->analysisfeature_id;
     }
-    
+
     // Insert interpro xml results into analysisfeatureprop table
     // but first check to see if we have an existing entry, if we do, then
     // increment the rank
@@ -357,7 +357,7 @@ class InterProImporter extends TripalImporter {
     if ($result) {
       $rank = $result->rank + 1;
     }
-    
+
     $values = array(
       'analysisfeature_id' => $analysisfeature_id,
       'type_id' => $type_id,
@@ -369,7 +369,7 @@ class InterProImporter extends TripalImporter {
       watchdog('tr_ipr_parse', 'ERROR: cannot add the XML for the feature into the analysisfeatureprop table',
           array(), WATCHDOG_ERROR);
     }
-    
+
     return $analysisfeature_id;
   }
   /**
@@ -378,7 +378,7 @@ class InterProImporter extends TripalImporter {
   function parseXML4($xml, $analysis_id, $filename,
       $parsego, $query_re, $query_type, $query_uniquename, $uptate_status,
       $file_no, $total_files) {
-        
+
         // If there is an EBI header then we need to skip that
         // and set our proteins array to be the second element of the array. This
         // occurs if results were generated with the online InterProScan tool.
@@ -393,7 +393,7 @@ class InterProImporter extends TripalImporter {
         elseif (preg_match('/^interpro_matches/', $xml->getname())) {
           $proteins = $xml;
         }
-        
+
         // Count the number of entries to be processed
         $no_iterations = 0;
         foreach ($proteins as $protein) {
@@ -401,19 +401,19 @@ class InterProImporter extends TripalImporter {
         }
         $this->setTotalItems($no_iterations);
         $idx_iterations = 0;
-        
+
         // Processed each protein
         foreach ($proteins as $protein) {
-          
+
           // Set job status
           $idx_iterations ++;
           $this->setItemsHandled($idx_iterations);
-          
+
           // match the protein id with the feature name
           $feature_id = 0;
           $attrs = $protein->attributes();
           $seqid = $attrs['id'];
-          
+
           // is the sequence name a generic name (i.e. 'Sequence_1') then the
           // results do not contain the original sequence names.  The only
           // option we have is to use the filename.  This will work in the case of
@@ -424,31 +424,31 @@ class InterProImporter extends TripalImporter {
             watchdog('tr_ipr_parse', "Sequence name for results is not specific, using filename: %filename as the sequence name\n", array('%filename' => $filename), WATCHDOG_NOTICE);
             $seqid = $filename;
           }
-          
+
           // Remove _ORF from the sequence name
           $seqid = preg_replace('/^(.+)_\d+_ORF\d+.*/', '$1', $seqid);
-          
+
           // match the name of the feature in the XML file to a feature in Chado
           $feature_id = $this->matchFeature($seqid, '', $query_re,
               $query_uniquename, $query_type);
           if (!$feature_id) {
             continue;
           }
-          
+
           // create an entry in the analysisfeature table and add the XML for this feature
           // to the analysisfeatureprop table
           $analysisfeature_id = $this->addAnalysisFeature($feature_id, $analysis_id, $protein);
           if (!$analysisfeature_id) {
             continue;
           }
-          
+
           // parse the XML
           $ipr_array = $this->parseFeatureXML($protein->asXML(), $feature_id);
-          
+
           // add in the IPR terms
           $iprterms = $ipr_array['iprterms'];
           $this->loadIprterms($iprterms, $feature_id, $analysisfeature_id);
-          
+
           // get the DB id for the GO database
           $parsego = chado_get_property(
               array('table' => 'analysis', 'id' => $analysis_id),
@@ -464,7 +464,7 @@ class InterProImporter extends TripalImporter {
             $this->loadGoterms($goterms, $feature_id, $analysisfeature_id, $go_db_id);
           }
         } // end foreach ($proteins as $protein)
-        
+
         return;
   }
   /**
@@ -490,13 +490,13 @@ class InterProImporter extends TripalImporter {
    */
   function matchFeature($seqid, $seqname = '',
       $query_re, $query_uniquename, $query_type) {
-        
+
         $feature = '';
-        
+
         // if a regular expression is provided then pick out the portion requested
         $matches = array();
         if ($query_re) {
-          
+
           // first try the seqid if the regex works then use it
           if (preg_match("/$query_re/", $seqid, $matches)) {
             $feature = $matches[1];
@@ -519,7 +519,7 @@ class InterProImporter extends TripalImporter {
         else {
           $feature =  $seqid;
         }
-        
+
         // now find the feature in chado
         $select = array();
         if ($query_uniquename) {
@@ -536,7 +536,7 @@ class InterProImporter extends TripalImporter {
             'name' => $query_type,
           );
         }
-        
+
         $feature_arr = chado_select_record('feature', array('feature_id'), $select);
         if (count($feature_arr) > 1) {
           watchdog('tr_ipr_parse', "Ambiguous: '%feature' matches more than one feature and is being skipped.",
@@ -549,7 +549,7 @@ class InterProImporter extends TripalImporter {
           return NULL;
         }
         $feature_id = $feature_arr[0]->feature_id;
-        
+
         return $feature_id;
   }
   /**
@@ -569,12 +569,12 @@ class InterProImporter extends TripalImporter {
    *
    */
   function loadIprterms($iprterms, $feature_id, $analysisfeature_id) {
-    
+
     // iterate through each othe IPR terms
     foreach ($iprterms as $ipr_id => $iprterm) {
-      
+
       if ($iprterm['ipr_name'] and $iprterm['ipr_name'] != 'noIPR') {
-        
+
         // currently there is no InterPro Ontology OBO file so we can't
         // load the IPR terms that way, we need to just add them
         // as we encounter them. If the term already exists
@@ -593,7 +593,7 @@ class InterProImporter extends TripalImporter {
               array('%name' => $ipr_id, '%value' =>  $iprterm['ipr_name']), WATCHDOG_ERROR);
           continue;
         }
-        
+
         // Insert IPR terms into the feature_cvterm table
         // the default pub_id of 1 (NULL) is used. if the cvterm already exists then just skip adding it
         $values = array(
@@ -611,7 +611,7 @@ class InterProImporter extends TripalImporter {
             continue;
           }
         }
-        
+
         // Insert IPR terms into the analysisfeatureprop table but only if it
         // doesn't already exist
         $values = array(
@@ -650,13 +650,13 @@ class InterProImporter extends TripalImporter {
    *   The db_id for the GO (Gene Ontology)
    */
   function loadGoterms($goterms, $feature_id, $analysisfeature_id, $go_db_id) {
-    
+
     // cycle through the GO terms and add them to the database
     foreach ($goterms as $go_id => $goterm) {
-      
+
       // seperate the 'GO:' from the term
       if (preg_match("/^.*?GO:(\d+).*$/", $go_id, $matches)) {
-        
+
         // Find cvterm_id for the matched GO term
         $sql = "
         SELECT cvterm_id
@@ -671,7 +671,7 @@ class InterProImporter extends TripalImporter {
               array('%term' => $matches[1]), WATCHDOG_WARNING);
           continue;
         }
-        
+
         // Insert GO terms into feature_cvterm table. Default pub_id = 1 (NULL) was used. But
         // only insert if not already there
         $values = array(
@@ -688,7 +688,7 @@ class InterProImporter extends TripalImporter {
             continue;
           }
         }
-        
+
         // Insert GO terms into analysisfeatureprop table
         $values = array(
           'analysisfeature_id' => $analysisfeature_id,
@@ -762,14 +762,14 @@ class InterProImporter extends TripalImporter {
    *       $terms['iprterms']['IPRXXXXXX']['matches'][$j]['locations'][$k]['match_evidence']
    */
   function parseFeatureXML($interpro_xml, $feature_id) {
-    
+
     // Load the XML into an object
     $xml_obj = simplexml_load_string($interpro_xml);
-    
+
     // we can distinguish between XML4 and XML5 by looking at the name and attributes
     $name  = $xml_obj->getname();
     $attrs = $xml_obj->attributes();
-    
+
     if ($name == 'nucleotide-sequence') {
       return $this->parseFeatureXML5Nucelotide($xml_obj, $feature_id);
     }
@@ -797,44 +797,44 @@ class InterProImporter extends TripalImporter {
    *  function
    */
   function parseFeatureXML5Protein($xml_obj, $feature_id) {
-    
+
     $terms  = array();
     $terms['format'] = 'XML5';
     $terms['iprterms'] = array();
     $terms['goterms'] = array();
-    
+
     // iterate through each element of the 'protein' children
     foreach ($xml_obj->children() as $element) {
-      
+
       if($element->getname() == 'matches') {
         // iterate through the match elements
         foreach ($element->children() as $match_element) {
           // initalize the $match array where we store details about this match
           $match = array();
-          
+
           // sometimes an alignment is made but there is no corresponding IPR term
           // so we default the match IPR term to 'noIPR'
           $match_ipr_id = 'noIPR';
           $match_ipr_type = '';
           $match_ipr_desc = '';
           $match_ipr_name = '';
-          
+
           // iterate through the children of this match to collect the details
           foreach ($match_element->children() as $match_details) {
-            
+
             // the <signature> tag contains information about the match in the
             // member database (e.g. GENE3D, PFAM, etc).
             if ($match_details->getname() == 'signature') {
-              
+
               // get the details about this match
               $attrs = $match_details->attributes();
               $match['match_name'] = (string) $attrs['name']; // the name of the match
               $match['match_desc'] = (string) $attrs['desc']; // the match description
               $match['match_id']   = (string) $attrs['ac'];   // the library accession number
-              
+
               // find the IPR term and GO Terms associated with this match
               foreach ($match_details->children() as $sig_element) {
-                
+
                 // the <entry> tag contains the IPR term entry that corresponds to this match
                 if ($sig_element->getname() == 'entry') {
                   $attrs = $sig_element->attributes();
@@ -842,14 +842,14 @@ class InterProImporter extends TripalImporter {
                   $match_ipr_type = (string) $attrs['type']; // e.g. DOMAIN, SITE
                   $match_ipr_name = (string) $attrs['name']; // the match name
                   $match_ipr_desc = (string) $attrs['desc']; // the match description
-                  
+
                   // initialize the term sub array and matches if they haven't already been added.
                   if (!array_key_exists($match_ipr_id, $terms['iprterms'])) {
                     $terms['iprterms'][$match_ipr_id] = array();
                     $terms['iprterms'][$match_ipr_id]['matches'] = array();
                     $terms['iprterms'][$match_ipr_id]['goterms'] = array();
                   }
-                  
+
                   // get the GO terms which are children of the <entry> element
                   foreach ($sig_element->children() as $entry_element) {
                     if ($entry_element->getname() == 'go-xref') {
@@ -858,7 +858,7 @@ class InterProImporter extends TripalImporter {
                       $goterm = array();
                       $goterm['category'] = (string) $attrs['category'];
                       $goterm['name']     = (string) $attrs['name'];
-                      
+
                       // GO terms are stored twice. Once with the IPR term to which they were found
                       // and second as first-level element of the $terms array where all terms are present
                       $terms['iprterms'][$match_ipr_id]['goterms'][$go_id] = $goterm;
@@ -866,7 +866,7 @@ class InterProImporter extends TripalImporter {
                     }
                   }
                 }
-                
+
                 // add in the match library and version information
                 if ($sig_element->getname() == 'signature-library-release') {
                   $attrs = $sig_element->attributes();
@@ -875,7 +875,7 @@ class InterProImporter extends TripalImporter {
                 }
               }
             } // end if($match_element->getname() == 'signature') {
-            
+
             // the <locations> tag lists the alignment locations for this match
             if($match_details->getname() == 'locations') {
               $k = 0;
@@ -890,26 +890,26 @@ class InterProImporter extends TripalImporter {
               }
             } // end if($match_details->getname() == 'locations') {
           } // end foreach ($match_element->children() as $match_details) {
-          
+
           $attrs = $match_element->attributes();
           $match['evalue'] = (string) $attrs['evalue'];
           $match['score']  = (string) $attrs['score'];
-          
+
           // add this match to the IPR term key to which it is associated
           $terms['iprterms'][$match_ipr_id]['matches'][] = $match;
           $terms['iprterms'][$match_ipr_id]['ipr_type'] = $match_ipr_type;
           $terms['iprterms'][$match_ipr_id]['ipr_name'] = $match_ipr_name;
           $terms['iprterms'][$match_ipr_id]['ipr_desc'] = $match_ipr_desc;
-          
+
           // make sure we have a goterms array in the event that none were found
           if (!array_key_exists('goterms', $terms['iprterms'][$match_ipr_id])) {
             $terms['iprterms'][$match_ipr_id]['goterms'] = array();
           }
-          
+
         } // end foreach ($element->children() as $match_element) {
       } // end if($element->getname() == 'matches') {
     } // end foreach ($xml_obj->children() as $element) {
-    
+
     //if (count($terms['iprterms']) > 0) {
     //  dpm($terms);
     //}
@@ -930,42 +930,42 @@ class InterProImporter extends TripalImporter {
    *  function
    */
   function parseFeatureXML5Nucelotide($xml_obj, $feature_id) {
-    
+
     $results  = array();
     $results['format'] = 'XML5';
     $results['iprterms'] = array();
     $results['goterms'] = array();
-    
+
     // iterate through each element of the 'nucleotide-sequence' children
     foreach ($xml_obj->children() as $element) {
       if($element->getname() == 'orf') {
         foreach ($element->children() as $sub_element) {
-          
+
           // the <protein> tag is an ORF in the nucleotide sequence
           if ($sub_element->getname() == 'protein') {
             $terms = $this->parseFeatureXML5Protein($sub_element, $feature_id);
-            
+
             // becase there are multiple ORFs per sequence we want to combine the
             // results into a single set to be returned by this function
             foreach ($terms['iprterms'] as $ipr_id => $iprterm) {
-              
+
               // consolidate the IPR
               $results['iprterms'][$ipr_id]['ipr_desc'] = $iprterm['ipr_desc'];
               $results['iprterms'][$ipr_id]['ipr_name'] = $iprterm['ipr_name'];
               $results['iprterms'][$ipr_id]['ipr_type'] = $iprterm['ipr_type'];
-              
+
               // merge the matches
               if (!array_key_exists('matches', $results['iprterms'][$ipr_id])) {
                 $results['iprterms'][$ipr_id]['matches'] = array();
               }
               $results['iprterms'][$ipr_id]['matches'] = array_merge($results['iprterms'][$ipr_id]['matches'], $iprterm['matches']);
-              
+
               // merge the goterms
               if (!array_key_exists('goterms', $results['iprterms'][$ipr_id])) {
                 $results['iprterms'][$ipr_id]['goterms'] = array();
               }
               $results['iprterms'][$ipr_id]['goterms'] = array_merge($results['iprterms'][$ipr_id]['goterms'], $iprterm['goterms']);
-              
+
               // merge the go terms
               foreach ($iprterm['goterms'] as $go_id => $goterm) {
                 $results['goterms'][$go_id]['name']     = $goterm['name'];
@@ -978,7 +978,7 @@ class InterProImporter extends TripalImporter {
     }
     return $results;
   }
-  
+
   /**
    * Parses the Interpro XML for a single feature and returns an array
    * containing the results.
@@ -993,45 +993,45 @@ class InterProImporter extends TripalImporter {
    *  function
    */
   function parseFeatureXML4($xml_obj, $feature_id) {
-    
+
     $terms  = array();
     $terms['format'] = 'XML4';
     $terms['iprterms'] = array();
     $terms['goterms'] = array();
-    
+
     // get the properties of this result
     $attr = $xml_obj->attributes();
     $protein['orf_id']     = (string) $attr["id"];
     $protein['orf_length'] = (string) $attr["length"];
     $protein['orf_crc64']  = (string) $attr["crc64"];
-    
+
     // iterate through each interpro results for this protein
     foreach ($xml_obj->children() as $intepro) {
-      
+
       // get the interpro term for this match
       $attr = $intepro->attributes();
       $ipr_id = (string) $attr["id"];
-      
+
       $terms['iprterms'][$ipr_id]['ipr_name'] = (string) $attr["name"];
       $terms['iprterms'][$ipr_id]['ipr_desc'] = (string) $attr["name"];
       $terms['iprterms'][$ipr_id]['ipr_type'] = (string) $attr["type"];
       $terms['iprterms'][$ipr_id]['matches']  = array();
       $terms['iprterms'][$ipr_id]['goterms']  = array();
-      
+
       // iterate through the elements of the interpro result
       $match_count = 0;
       foreach ($intepro->children() as $level1) {
         $element_name = $level1->getName();
         if ($element_name == 'match') {
-          
+
           $match = array();
-          
+
           // get the match name for this match
           $attr = $level1->attributes();
           $match['match_id']     = (string) $attr["id"];
           $match['match_name']   = (string) $attr["name"];
           $match['match_dbname'] = (string) $attr["dbname"];
-          
+
           // get the location information for this match
           $k = 0;
           foreach ($level1->children() as $level2) {
@@ -1046,11 +1046,11 @@ class InterProImporter extends TripalImporter {
               $k++;
             }
           }
-          
+
           // add this match to the IPR term key to which it is associated
           $terms['iprterms'][$ipr_id]['matches'][] = $match;
         }
-        
+
         // get the GO terms for this match
         if ($element_name == 'classification') {
           $attrs = $level1->attributes();
@@ -1059,7 +1059,7 @@ class InterProImporter extends TripalImporter {
             $goterm = array();
             $goterm['category'] = (string) $level1->category;
             $goterm['name']     = (string) $level1->description;
-            
+
             // GO terms are stored twice. Once with the IPR term to which they were found
             // and second as first-level element of the $terms array where all terms are present
             $terms['iprterms'][$ipr_id]['goterms'][$go_id] = $goterm;
@@ -1068,7 +1068,7 @@ class InterProImporter extends TripalImporter {
         }
       }
     }
-    
+
     //if (count($terms['iprterms']) > 0) {
     //  dpm($terms);
     //}
