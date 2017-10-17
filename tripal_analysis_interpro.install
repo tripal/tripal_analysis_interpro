@@ -10,14 +10,17 @@
  */
 function tripal_analysis_interpro_install() {
 
-   // Register this module as an analysis.
+  // For Tripal v2 backwards compatibility, register this
+  // module as an analysis.
+  if (module_exists('tripal_analysis')) {
    tripal_register_analysis_child('tripal_analysis_interpro');
+  }
 
    // Add the CV terms needed for this module.
    tripal_analysis_interpro_add_cvterms();
 
    tripal_analysis_interpro_add_dbs();
-   
+
    tripal_analysis_interpro_create_entity_type();
 }
 
@@ -32,8 +35,11 @@ function tripal_analysis_interpro_uninstall() {
    // the {tripal_analysis} table before we can delete anything from it. Thus,
    // we perform a db_table_exists() check before the deletion
 
-   //Delete the settings from {tripal_analysis} table
+  // For Tripal v2 backwards compatibility, register this
+  // module as an analysis.
+  if (module_exists('tripal_analysis')) {
    tripal_unregister_analysis_child('tripal_analysis_interpro');
+  }
 
    // Delete module's variables from variables table.
    db_query("DELETE FROM {variable} WHERE name=:name",
@@ -257,7 +263,7 @@ function tripal_analysis_interpro_create_entity_type () {
     'cv_name' => 'local',
     'definition' => 'Results for InterPro analysis.',
   ));
-  
+
   $error = '';
   $args = array(
     'vocabulary' => 'local',
