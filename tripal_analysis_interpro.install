@@ -277,7 +277,14 @@ function tripal_analysis_interpro_create_entity_type () {
     )
   );
   $term = tripal_load_term_entity(array('vocabulary' => 'local', 'accession' => 'interpro_results'));
-  $bundle = tripal_load_bundle_entity(array('term_id' => $term->id));
+  if ($term) {
+    $bundle = tripal_load_bundle_entity(array('term_id' => $term->id));
+  }
+  if (!$term or !$bundle) {
+    if (!tripal_create_bundle($args, $error)) {
+      throw new Exception($error['!message']);
+    }
+  }
   // Add cvterm_mapping for the InterPro results entity type
   $identifier = array(
     'cv_id' => array('name' => 'local'),
@@ -285,11 +292,6 @@ function tripal_analysis_interpro_create_entity_type () {
   );
   $cvterm = tripal_get_cvterm($identifier);
   tripal_chado_add_cvterm_mapping($cvterm->cvterm_id, 'analysis', NULL);
-  if (!$term or !$bundle) {
-    if (!tripal_create_bundle($args, $error)) {
-      throw new Exception($error['!message']);
-    }
-  }
 }
 
 /**
