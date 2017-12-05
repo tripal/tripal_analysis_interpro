@@ -36,6 +36,13 @@ class InterProImporter extends TripalImporter {
    * The title that should appear above the upload button.
    */
   public static $upload_title = 'XML File';
+
+  /**
+   * Text that should appear on the button at the bottom of the importer
+   * form.
+   */
+  public static $button_text = 'Import InterProScan file';
+
   /**
    * @see TripalImporter::form()
    */
