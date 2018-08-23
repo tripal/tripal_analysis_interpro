@@ -303,10 +303,10 @@ class InterProImporter extends TripalImporter {
               $this->loadIprterms($iprterms, $feature_id, $analysisfeature_id);
 
               // get the DB id for the GO database
-              $parsego = chado_get_property(
-                  array('table' => 'analysis', 'id' => $analysis_id),
-                  array('type_name' => 'analysis_interpro_parsego', 'cv_name' => 'tripal')
-                  );
+              //$parsego = chado_get_property(
+              //    array('table' => 'analysis', 'id' => $analysis_id),
+              //    array('type_name' => 'analysis_interpro_parsego', 'cv_name' => 'tripal')
+              //    );
               $go_db_id = chado_query("SELECT db_id FROM {db} WHERE name = 'GO'")->fetchField();
               if ($parsego and !$go_db_id) {
                 watchdog('tr_ipr_parse', 'GO schema not installed in chado. GO terms are not processed.', array(), WATCHDOG_WARNING);
