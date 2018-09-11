@@ -15,7 +15,7 @@ class local__interpro_results extends ChadoField {
   // If you override this variable in a child class be sure to replicate the
   // term_name, term_vocab, term_accession and term_fixed keys as these are
   // required for all TripalFields.
-  public static $default_instance_settings  = array(
+  public static $default_instance_settings = [
     // The short name for the vocabulary (e.g. shcema, SO, GO, PATO, etc.).
     'term_vocabulary' => 'local',
     // The name of the term.
@@ -26,7 +26,7 @@ class local__interpro_results extends ChadoField {
     // type. This will create form elements when editing the field instance
     // to allow the site admin to change the term settings above.
     'term_fixed' => FALSE,
-  );
+  ];
 
   // The default widget for this field.
   public static $default_widget = 'local__interpro_results_widget';
@@ -37,7 +37,7 @@ class local__interpro_results extends ChadoField {
   /**
    * @see TripalField::load()
    */
-  public function load($entity, $details = array()) {
+  public function load($entity, $details = []) {
     $record = $entity->chado_record;
 
     $settings = $this->instance['settings'];
@@ -48,25 +48,24 @@ class local__interpro_results extends ChadoField {
 
     // Get the terms for each of the keys for the 'values' property.
     $label_term = 'format:1341';
-    // Set some defaults for the empty record.
-    $entity->{$field_name}['und'][0] = array(
-      'value' => ''
-    );
 
     // Get the list of results.
     $interpro_results = tripal_get_interpro_XML_results($record->feature_id);
-    if (is_array($interpro_results)) {
-      foreach ($interpro_results as $delta => $results) {
-        $xml = '';
-        if (isset($results->xml)) {
-          $xml = $results->xml;
-          unset($results->xml);
-        }
-        $entity->{$field_name}['und'][$delta] = array(
-          'value' => $xml,
-          'parsed' => $results
-        );
+
+    if (empty($interpro_results)) {
+      $entity->{$field_name};
+      return;
+    }
+    foreach ($interpro_results as $delta => $results) {
+      $xml = '';
+      if (isset($results->xml)) {
+        $xml = $results->xml;
+        unset($results->xml);
       }
+      $entity->{$field_name}['und'][$delta] = [
+        'value' => $xml,
+        'parsed' => $results,
+      ];
     }
   }
 }
