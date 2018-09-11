@@ -54,6 +54,9 @@ function tripal_analysis_interpro_bundle_instances_info($entity_type, $bundle) {
         'chado_table' => 'analysis_feature',
         'chado_column' => '',
         'base_table' => 'feature',
+        'term_vocabulary' => 'local',
+        'term_name' => 'InterPro results',
+        'term_accession' => 'interpro_results',
       ),
       'widget' => array(
         'type' => 'local__interpro_results_widget',
