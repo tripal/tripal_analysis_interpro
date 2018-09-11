@@ -53,7 +53,7 @@ class local__interpro_results extends ChadoField {
     $interpro_results = tripal_get_interpro_XML_results($record->feature_id);
 
     if (empty($interpro_results)) {
-      $entity->{$field_name};
+      unset($entity->{$field_name});
       return;
     }
     $delta = 0;
