@@ -59,13 +59,8 @@ class local__interpro_results extends ChadoField {
     $delta = 0;
 
     foreach ($interpro_results as $analysis_id => $results) {
-      $xml = '';
-      if (isset($results->xml)) {
-        $xml = $results->xml;
-        unset($results->xml);
-      }
       $entity->{$field_name}['und'][$delta] = [
-        'value' => $xml,
+        'value' => 1,
         'parsed' => $results,
         'analysis_id' => $analysis_id
       ];
