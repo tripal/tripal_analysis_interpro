@@ -54,6 +54,9 @@ function tripal_analysis_interpro_bundle_instances_info($entity_type, $bundle) {
         'chado_table' => 'analysis_feature',
         'chado_column' => '',
         'base_table' => 'feature',
+        'term_vocabulary' => 'local',
+        'term_name' => 'InterPro results',
+        'term_accession' => 'interpro_results',
       ),
       'widget' => array(
         'type' => 'local__interpro_results_widget',
@@ -89,18 +92,18 @@ function tripal_analysis_interpro_bundle_fields_info_alter(&$info, $bundle, $ter
  * This is a Tripal defined hook.
  */
 function tripal_analysis_interpro_bundle_instances_info_alter(&$info, $bundle, $term) {
-  
+
   if ($term->vocab->vocabulary == 'local' and $term->accession == 'interpro_results') {
     // We don't need the source version field.
     if (array_key_exists('iao__algorithm', $info)) {
       unset($info['iao__algorithm']);
     }
-    
+
     // Set a default for the local analysis type field
     if (array_key_exists('local__analysis_type', $info)) {
       $info['local__analysis_type']['default_value'][0]['value'] = 'interpro_analysis';
     }
-    
+
     // Rename some field labels and descriptions to be more appropriate.
     if (array_key_exists('swo__software', $info)) {
       $info['swo__software']['label'] = 'InterPro Program';
