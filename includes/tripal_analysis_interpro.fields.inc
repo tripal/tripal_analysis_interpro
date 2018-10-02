@@ -11,7 +11,6 @@ function tripal_analysis_interpro_bundle_fields_info($entity_type, $bundle) {
 
   $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
   $vocab = $term->vocab;
-
   if ($vocab->vocabulary == 'SO') {
     $field_name = 'local__interpro_results';
     $field_type = 'local__interpro_results';
@@ -63,7 +62,7 @@ function tripal_analysis_interpro_bundle_instances_info($entity_type, $bundle) {
       ),
       'display' => array(
         'default' => array(
-          'label' => 'inline',
+          'label' => 'hidden',
           'type' => 'local__interpro_results_formatter',
         ),
       ),

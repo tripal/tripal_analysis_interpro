@@ -257,14 +257,17 @@ function tripal_analysis_interpro_requirements($phase) {
  * Create Analysis Interpro Entity Type
  */
 function tripal_analysis_interpro_create_entity_type () {
-  $term = tripal_insert_cvterm(array(
+  
+  // Add the vocabulary term.
+  $term = chado_insert_cvterm(array(
     'id' => 'local:interpro_results',
     'name' => 'InterPro results',
     'cv_name' => 'local',
     'definition' => 'Results for InterPro analysis.',
   ));
 
-  $error = '';
+  // Next add the content type
+  $cvterm = tripal_get_cvterm(['id' => 'local:interpro_results']);
   $args = array(
     'vocabulary' => 'local',
     'accession' => 'interpro_results',
@@ -276,22 +279,13 @@ function tripal_analysis_interpro_create_entity_type () {
       'type_value' => 'interpro_analysis'
     )
   );
-  $term = tripal_load_term_entity(array('vocabulary' => 'local', 'accession' => 'interpro_results'));
-  if ($term) {
-    $bundle = tripal_load_bundle_entity(array('term_id' => $term->id));
-  }
-  if (!$term or !$bundle) {
-    if (!tripal_create_bundle($args, $error)) {
-      throw new Exception($error['!message']);
+  $bundle = tripal_load_bundle_entity(['accession' => $args['vocabulary'] . ':' . $args['accession']]);
+  if (!$bundle) {
+    if (!tripal_create_bundle($args, $job)) {
+      $msg = t('Error encountered creating !type Content Type.', ['!type' => $args['term_name']]);
+      throw new Exception($msg);
     }
   }
-  // Add cvterm_mapping for the InterPro results entity type
-  $identifier = array(
-    'cv_id' => array('name' => 'local'),
-    'name' => 'InterPro results'
-  );
-  $cvterm = tripal_get_cvterm($identifier);
-  tripal_chado_add_cvterm_mapping($cvterm->cvterm_id, 'analysis', NULL);
 }
 
 /**
