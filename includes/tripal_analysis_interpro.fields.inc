@@ -49,7 +49,7 @@ function tripal_analysis_interpro_bundle_instances_info($entity_type, $bundle) {
       'description' => 'Results format for searches of the InterPro database.',
       'required' => FALSE,
       'settings' => array(
-        'auto_attach' => FALSE,
+        'auto_attach' => TRUE,
         'chado_table' => 'analysis_feature',
         'chado_column' => '',
         'base_table' => 'feature',
