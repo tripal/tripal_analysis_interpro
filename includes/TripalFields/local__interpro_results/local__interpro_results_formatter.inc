@@ -19,35 +19,9 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
    * @see TripalFieldFormatter::view()
    */
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
-    // Hack to ensure that jquery 3.1.0 is loaded just before calling noconflict.
-    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js", [
-      'type' => 'external',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 100,
-    ]);
 
-
-    drupal_add_js("if (typeof feature_viewer_jquery == 'undefined') {var feature_viewer_jquery = jQuery.noConflict(true);}", [
-      'type' => 'inline',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 1000,
-    ]);
-
-    // Can all of the above add_js calls be removed?
-    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.bundle.js", [
-      'type' => 'external',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 500,
-    ]);
-
-    // We want JQuery UI support for the accordion.
-    drupal_add_library('system', 'ui.accordion');
+    //Add external libraries.
+    $this->add_js();
 
     // Get the settings.
     $settings = $display['settings'];
@@ -81,7 +55,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
         $content .= '
         <h3 id="analysis-' . $analysis->analysis_id . '">' . $analysis->name . '</h3>
           <p>
-            Performed on: ' . preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted) . '
+            Performed on: ' . $date_performed . '
             <br>Display provided by the ' . l('neXtProt Feature Viewer', 'https://github.com/calipho-sib/feature-viewer') . '
             <div
               id="features_ipr_vis-' . $analysis->analysis_id . '"
@@ -103,6 +77,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
         ];
 
         $rows = [];
+        //hit counter.
         $j = 0;
         foreach ($iprterms as $ipr_id => $iprterm) {
 
@@ -195,7 +170,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
               $match_dbname = l($match_dbname, $match_db->url, ['attributes' => ['target' => '_blank']]);
             }
             $feature_viewer_data = [];
-            foreach($hsp_pos as $pos){
+            foreach ($hsp_pos as $pos) {
               $feature_viewer_data[] = [
                 'x' => intval($pos['x']),
                 'y' => intval($pos['y']),
@@ -205,8 +180,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
               $j++;
 
             }
-            // Build feature viewer data array.
-
+            // Build feature viewer data array
 
             $rows[] = [
               'data' => [
@@ -224,13 +198,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
               'class' => ['tripal-analysis-ipr-fv-' . $analysis->analysis_id],
               'fv_data' => json_encode($feature_viewer_data),
               'name' => $match_name,
-
             ];
-
-            $viz_name = $ipr_id;
-            if (!empty($match['match_id'])) {
-              $viz_name = $match['match_id'];
-            }
 
           } // end foreach ($matches as $match) {
         } // end foreach ($iprterms as $ipr_id => $iprterm) {
@@ -279,10 +247,47 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
         '#type' => 'markup',
         '#markup' => $content,
       ];
-    }
 
-    // Add the visualization.
-    drupal_add_js(drupal_get_path('module',
-        'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro_field.js');
+      // Add the visualization.
+      drupal_add_js(drupal_get_path('module',
+          'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro_field.js');
+    }
+  }
+
+
+  /**
+   * Adds necessary JS for the field.
+   */
+  private function add_js() {
+
+    // Hack to ensure that jquery 3.1.0 is loaded just before calling noconflict.
+    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js", [
+      'type' => 'external',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 100,
+    ]);
+
+
+    drupal_add_js("if (typeof feature_viewer_jquery == 'undefined') {var feature_viewer_jquery = jQuery.noConflict(true);}", [
+      'type' => 'inline',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 1000,
+    ]);
+
+    // Can all of the above add_js calls be removed?
+    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.bundle.js", [
+      'type' => 'external',
+      'scope' => 'header',
+      'group' => 15,
+      'every_page' => TRUE,
+      'weight' => 500,
+    ]);
+
+    // We want JQuery UI support for the accordion.
+    drupal_add_library('system', 'ui.accordion');
   }
 }
