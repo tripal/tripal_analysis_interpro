@@ -27,20 +27,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
       'every_page' => TRUE,
       'weight' => 100,
     ]);
-    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js", [
-      'type' => 'external',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 200,
-    ]);
-    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js", [
-      'type' => 'external',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 300,
-    ]);
+
 
     drupal_add_js("if (typeof feature_viewer_jquery == 'undefined') {var feature_viewer_jquery = jQuery.noConflict(true);}", [
       'type' => 'inline',
@@ -298,5 +285,4 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
     drupal_add_js(drupal_get_path('module',
         'tripal_analysis_interpro') . '/theme/js/tripal_analysis_interpro_field.js');
   }
-
 }

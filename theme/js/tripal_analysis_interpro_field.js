@@ -39,8 +39,6 @@
                     var hit_name = $(this).attr('name');
                  //   var class_name = $(this).attr('fv_class');
                     var data = JSON.parse($(this).attr('fv_data'));
-                    console.log(data)
-                   console.log("hi")
                     if (data) {
                         fv.addFeature({
                             data: data,
