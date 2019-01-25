@@ -34,7 +34,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
       'every_page' => TRUE,
       'weight' => 300,
     ));
-    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.min.js", array(
+    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.4/dist/feature-viewer.bundle.js", array(
       'type' => 'external',
       'scope' => 'header',
       'group' => 15,
