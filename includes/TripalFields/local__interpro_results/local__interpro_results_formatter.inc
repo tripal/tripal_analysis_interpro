@@ -28,8 +28,7 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
     $feature = $entity->chado_record;
     $feature = chado_expand_var($feature, 'field', 'feature.residues');
 
-    $content = "<p>Click a tab below to view interpro alignments.</p>";
-    $content .= '<div id="tripal-interpro-analysis-accordian"></div>';
+   // $element[0]['preamble'] = ['#markup' => "<p>Click a pane below to view interpro alignments.</p>"];
 
     $i = 0;
     $list_items = '';
@@ -51,10 +50,21 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
         }
         $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
 
-        // Add the div box for each results.
-        $content .= '
-        <h3 id="analysis-' . $analysis->analysis_id . '">' . $analysis->name . '</h3>
-          <p>
+        $element[0][$i] = ['#type' => 'fieldset', '#title' => $aname];
+
+        if ($i > 0) {
+
+          // Make collapsed and collapsible.
+          //
+          if ($i === 1){
+            $element[0][$i]['#collapsible'] =TRUE;
+            $element[0][$i]['#collapsed'] = FALSE;
+          }
+          $element[0][$i]['#collapsible'] = TRUE;
+          $element[0][$i]['#collapsed'] = TRUE;
+        }
+
+        $element[0][$i]['content'] = ['#markup' =>'<h3 id="analysis-' . $analysis->analysis_id . '">' . $analysis->name . '</h3><p>
             Performed on: ' . $date_performed . '
             <br>Display provided by the ' . l('neXtProt Feature Viewer', 'https://github.com/calipho-sib/feature-viewer') . '
             <div
@@ -63,8 +73,9 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
               analysis_id="' . $analysis->analysis_id . '" residues="' . $feature->residues . '"
               width="500px"></div>
             <br>
-            </p>
-      ';
+            </p>'];
+
+
 
         // ALIGNMENT SUMMARY.
         $headers = [
@@ -230,22 +241,21 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
         $list_items .= "<br>";
         $i++;
       }
+
+
     }
     if ($i == 0) {
       $element[0] = [
         '#type' => 'markup',
         '#markup' => 'There are no InterPro results for this feature.',
       ];
+      return;
     }
     else {
-      // Add a list at the top of the field.
-      $content .= $list_items;
-      if (isset($element[0]['#markup'])) {
-        $content .= $element[0]['#markup'];
-      }
-      $element[0] = [
+
+      $element[0]['table'] = [
         '#type' => 'markup',
-        '#markup' => $content,
+        '#markup' => $list_items,
       ];
 
       // Add the visualization.
@@ -260,26 +270,8 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
    */
   private function add_js() {
 
-    // Hack to ensure that jquery 3.1.0 is loaded just before calling noconflict.
-    drupal_add_js("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js", [
-      'type' => 'external',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 100,
-    ]);
-
-
-    drupal_add_js("if (typeof feature_viewer_jquery == 'undefined') {var feature_viewer_jquery = jQuery.noConflict(true);}", [
-      'type' => 'inline',
-      'scope' => 'header',
-      'group' => 15,
-      'every_page' => TRUE,
-      'weight' => 1000,
-    ]);
-
     // Can all of the above add_js calls be removed?
-    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.bundle.js", [
+    drupal_add_js("https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.4/dist/feature-viewer.bundle.js", [
       'type' => 'external',
       'scope' => 'header',
       'group' => 15,
@@ -287,7 +279,5 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
       'weight' => 500,
     ]);
 
-    // We want JQuery UI support for the accordion.
-    drupal_add_library('system', 'ui.accordion');
   }
 }

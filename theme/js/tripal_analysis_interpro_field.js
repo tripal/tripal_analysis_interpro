@@ -3,12 +3,6 @@
     Drupal.behaviors.tripal_analysis_interpro = {
         attach: function (context, settings) {
 
-            $("#tripal-interpro-analysis-accordian").accordion({
-                collapsible: true,
-                active: false,
-                heightStyle: "content"
-            });
-
 
             // For each element of class "interpro-alignment-viewer" add the
             // feature viewer.
