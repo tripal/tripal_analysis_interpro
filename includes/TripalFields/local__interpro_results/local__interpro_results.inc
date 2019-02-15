@@ -54,6 +54,7 @@ class local__interpro_results extends ChadoField {
 
     if (empty($interpro_results)) {
       unset($entity->{$field_name});
+      $entity->{$field_name}['und'][0][''] = '';
       return;
     }
     $delta = 0;
