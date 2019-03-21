@@ -50,19 +50,20 @@ class local__interpro_results_formatter extends ChadoFieldFormatter {
         }
         $date_performed = preg_replace("/^(\d+-\d+-\d+) .*/", "$1", $analysis->timeexecuted);
 
-        $element[0][$i] = ['#type' => 'fieldset', '#title' => $aname];
-
-        if ($i > 0) {
-
-          // Make collapsed and collapsible.
-          //
-          if ($i === 1){
-            $element[0][$i]['#collapsible'] =TRUE;
-            $element[0][$i]['#collapsed'] = FALSE;
-          }
-          $element[0][$i]['#collapsible'] = TRUE;
-          $element[0][$i]['#collapsed'] = TRUE;
-        }
+        $element[0][$i] = [
+          '#type' => 'fieldset',
+          '#title' => $aname,
+          '#collapsible' => TRUE,
+          '#collapsed' => $i != 1,
+          '#attached' => [
+            'library' => [
+              ['system', 'drupal.collapse'],
+            ],
+          ],
+          '#attributes' => [
+            'class' => ['collapsible', 'collapsed'],
+          ],
+        ];
 
         $element[0][$i]['content'] = ['#markup' =>'<h3 id="analysis-' . $analysis->analysis_id . '">' . $analysis->name . '</h3><p>
             Performed on: ' . $date_performed . '
