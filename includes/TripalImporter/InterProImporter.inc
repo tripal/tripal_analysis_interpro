@@ -491,9 +491,12 @@ class InterProImporter extends TripalImporter {
    * @return
    *   The feature_id of the matching feature or NULL if not found.
    */
-  function matchFeature($seqid, $seqname = '',
+  function matchFeature($seqid, $seqname,
       $query_re, $query_uniquename, $query_type) {
 
+        if (!$seqname) {
+          $seqname = '';
+        }
         $feature = '';
 
         // if a regular expression is provided then pick out the portion requested
